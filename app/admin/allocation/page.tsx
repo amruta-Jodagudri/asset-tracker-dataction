@@ -1,168 +1,213 @@
 "use client"
 
 import type React from "react"
-
 import { useAuth } from "@/lib/context"
-import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState, Suspense } from "react"
 import AdminLayout from "@/components/admin-layout"
-import { mockEmployees, mockAssets } from "@/lib/mock-data"
 
-type CategoryType = "" | "Laptop & Accessories" | "Mobile" | "Monitor"
-
-type AccessoryType = "" | "Headphone" | "Mouse" | "Keyboard" | "Dock-station" | "Mac-Connector"
-
-type AccessoryField = {
-  type: AccessoryType
-  serialNumber: string
-}
-
-type MobileFields = {
-  mobileSerial: string
-  imei: string
-  makeModel: string
-  hasCharger: "yes" | "no"
-  chargerSerial: string
-  hasBackCover: "yes" | "no"
-  hasSimCard: "yes" | "no"
-  simNumber: string
-  penalties: string
-}
-
-type MonitorFields = {
-  monitorSerial: string
-  makeModel: string
-  hasPowerCable: "yes" | "no"
-  hasHdmi: "yes" | "no"
-}
-
+// Main component wrapped in Suspense
 export default function AllocationPage() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <AllocationContent />
+    </Suspense>
+  )
+}
+
+// Separate component for the actual content
+function AllocationContent() {
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('edit')
+  const editType = searchParams.get('type') as CategoryType
+  
   const { user } = useAuth()
   const router = useRouter()
   const [category, setCategory] = useState<CategoryType>("")
-  const [accessories, setAccessories] = useState<AccessoryField[]>([{ type: "", serialNumber: "" }])
+  const [isEditMode, setIsEditMode] = useState(false)
+  
+  // Employee Details
+  const [empId, setEmpId] = useState("")
+  const [empName, setEmpName] = useState("")
+  const [businessArea, setBusinessArea] = useState("")
+  
+  // Common Fields
+  const [allocationDate, setAllocationDate] = useState(new Date().toISOString().split("T")[0])
+  const [remarks, setRemarks] = useState("")
+  const [status, setStatus] = useState<"Active" | "Returned" | "Pending">("Active")
+  
+  // Laptop Fields
+  const [laptopFields, setLaptopFields] = useState<LaptopFields>({
+    laptopSrNo: "",
+    laptopOwnership: "Company",
+    makeModel: "",
+    configuration: "",
+    charger: "Yes",
+    bag: "No",
+    headphoneSrNo: "",
+    mouseSrNo: "",
+    keyboardSrNo: "",
+    dockStationSrNo: "",
+    macConnectHardware: ""
+  })
+  
+  // Mobile Fields
   const [mobileFields, setMobileFields] = useState<MobileFields>({
-    mobileSerial: "",
-    imei: "",
+    mobileSrNo: "",
+    imeiNo: "",
     makeModel: "",
-    hasCharger: "no",
-    chargerSerial: "",
-    hasBackCover: "no",
-    hasSimCard: "no",
-    simNumber: "",
-    penalties: ""
+    charger: "Yes",
+    chargerSrNo: "",
+    backCover: "No",
+    simCard: "No",
+    simNumber: ""
   })
+  
+  // Monitor Fields
   const [monitorFields, setMonitorFields] = useState<MonitorFields>({
-    monitorSerial: "",
+    monitorSrNo: "",
     makeModel: "",
-    hasPowerCable: "no",
-    hasHdmi: "no"
+    powerCable: "Yes",
+    hdmi: "Yes"
   })
-  const [formData, setFormData] = useState({
-    empId: "",
-    empName: "",
-    businessArea: "",
-    category: "" as CategoryType,
-    laptopSerial: "",
-    laptopOwnership: "",
-    laptopMakeModel: "",
-    laptopConfiguration: "",
-    hasCharger: "no",
-    hasBag: "no",
-    allocationDate: new Date().toISOString().split("T")[0],
-    remarks: "",
-  })
+  
+  // Accessories
+  const [accessories, setAccessories] = useState<AccessoryField[]>([
+    { type: "", serialNumber: "" }
+  ])
+  
   const [submitted, setSubmitted] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [mockEmployees, setMockEmployees] = useState<any[]>([])
+  const [mockAssets, setMockAssets] = useState<any[]>([])
 
   // Filter assets by category
   const laptopAssets = mockAssets.filter(asset => asset.category === "Computers")
   const mobileAssets = mockAssets.filter(asset => asset.category === "Mobile")
   const monitorAssets = mockAssets.filter(asset => asset.category === "Monitor")
-  const accessoryAssets = mockAssets.filter(asset => ["Headphone", "Mouse", "Keyboard", "Dock-station", "Mac-Connector"].includes(asset.category))
+  const accessoryAssets = mockAssets.filter(asset => 
+    ["Headphone", "Mouse", "Keyboard", "Dock-station", "Mac-Connector"].includes(asset.category)
+  )
+
+  useEffect(() => {
+    // Load mock data
+    const loadMockData = async () => {
+      try {
+        // Import mock data dynamically
+        const { mockEmployees: employees, mockAssets: assets } = await import("@/lib/mock-data")
+        setMockEmployees(employees)
+        setMockAssets(assets)
+      } catch (error) {
+        console.error("Failed to load mock data:", error)
+        setMockEmployees([])
+        setMockAssets([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadMockData()
+  }, [])
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
       router.push("/")
+      return
     }
-  }, [user, router])
-
-  if (!user) return null
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-
-    // Auto-fill employee name when EMP ID is selected
-    if (name === "empId") {
-      const employee = mockEmployees.find((e) => e.employeeId === value)
-      if (employee) {
-        setFormData((prev) => ({
-          ...prev,
-          empName: employee.name,
-          // Don't auto-fill business area - user will type it
-        }))
+    
+    // Initialize edit mode if params exist
+    if (editId && editType && !isLoading) {
+      setIsEditMode(true)
+      setCategory(editType)
+      // In a real app, fetch existing data here
+      // For now, we'll simulate with mock data
+      if (editType === "Laptop & Accessories") {
+        setLaptopFields({
+          laptopSrNo: "DLXPS13-001",
+          laptopOwnership: "Company",
+          makeModel: "Dell XPS 13",
+          configuration: "i7, 16GB RAM, 512GB SSD",
+          charger: "Yes",
+          bag: "Yes",
+          headphoneSrNo: "SNYHP-001",
+          mouseSrNo: "LGTMS-001",
+          keyboardSrNo: "LGTKB-001",
+          dockStationSrNo: "DLDKS-001",
+          macConnectHardware: "APLMC-001"
+        })
+        setEmpId("EMP001")
+        setEmpName("John Doe")
+        setBusinessArea("Engineering")
+        setRemarks("Primary development machine")
+        setStatus("Active")
       }
     }
+  }, [user, router, editId, editType, isLoading])
 
-    // Auto-fill laptop details when serial number is selected
-    if (name === "laptopSerial") {
-      const asset = laptopAssets.find((a) => a.serialNumber === value)
+  if (!user || isLoading) return <LoadingSkeleton />
+
+  const handleEmployeeSelect = (employeeId: string) => {
+    setEmpId(employeeId)
+    const employee = mockEmployees.find(e => e.employeeId === employeeId)
+    if (employee) {
+      setEmpName(employee.name)
+    }
+  }
+
+  const handleLaptopFieldChange = (field: keyof LaptopFields, value: string) => {
+    setLaptopFields(prev => ({ ...prev, [field]: value }))
+    
+    // Auto-fill make model when serial is selected
+    if (field === "laptopSrNo") {
+      const asset = laptopAssets.find(a => a.serialNumber === value)
       if (asset) {
-        setFormData((prev) => ({
+        setLaptopFields(prev => ({
           ...prev,
-          laptopMakeModel: `${asset.name} ${asset.model}`,
-          laptopConfiguration: asset.configuration,
-          laptopOwnership: asset.allocationType || "", // Auto-fill ownership from allocation type
+          makeModel: `${asset.name} ${asset.model}`,
+          configuration: asset.configuration
         }))
       }
-    }
-
-    // Handle category change
-    if (name === "category") {
-      setCategory(value as CategoryType)
-      setFormData((prev) => ({ ...prev, category: value as CategoryType }))
-      
-      // Reset accessory fields
-      setAccessories([{ type: "", serialNumber: "" }])
     }
   }
 
   const handleMobileFieldChange = (field: keyof MobileFields, value: string) => {
-    const updatedFields = { ...mobileFields, [field]: value }
+    setMobileFields(prev => ({ ...prev, [field]: value }))
     
-    // Auto-fill mobile details when serial number is selected
-    if (field === "mobileSerial") {
-      const mobileAsset = mobileAssets.find((a) => a.serialNumber === value)
-      if (mobileAsset) {
-        updatedFields.makeModel = `${mobileAsset.name} ${mobileAsset.model}`
-        updatedFields.imei = mobileAsset.serialNumber // Using serial as IMEI for mock
+    // Auto-fill make model and IMEI when serial is selected
+    if (field === "mobileSrNo") {
+      const asset = mobileAssets.find(a => a.serialNumber === value)
+      if (asset) {
+        setMobileFields(prev => ({
+          ...prev,
+          makeModel: `${asset.name} ${asset.model}`,
+          imeiNo: asset.serialNumber
+        }))
       }
     }
-    
-    setMobileFields(updatedFields)
   }
 
   const handleMonitorFieldChange = (field: keyof MonitorFields, value: string) => {
-    const updatedFields = { ...monitorFields, [field]: value }
+    setMonitorFields(prev => ({ ...prev, [field]: value }))
     
-    // Auto-fill monitor details when serial number is selected
-    if (field === "monitorSerial") {
-      const monitorAsset = monitorAssets.find((a) => a.serialNumber === value)
-      if (monitorAsset) {
-        updatedFields.makeModel = `${monitorAsset.name} ${monitorAsset.model}`
+    // Auto-fill make model when serial is selected
+    if (field === "monitorSrNo") {
+      const asset = monitorAssets.find(a => a.serialNumber === value)
+      if (asset) {
+        setMonitorFields(prev => ({
+          ...prev,
+          makeModel: `${asset.name} ${asset.model}`
+        }))
       }
     }
-    
-    setMonitorFields(updatedFields)
   }
 
   const handleAccessoryChange = (index: number, field: keyof AccessoryField, value: string) => {
     const updatedAccessories = [...accessories]
-    updatedAccessories[index][field] = value as any
+    updatedAccessories[index] = { ...updatedAccessories[index], [field]: value }
     
-    // Auto-fill serial number for Headphone and Mouse
-    if (field === 'type' && (value === 'Headphone' || value === 'Mouse')) {
-      const accessoryAsset = accessoryAssets.find((a) => a.category === value)
+    // Auto-fill serial number for selected accessory type
+    if (field === 'type' && value) {
+      const accessoryAsset = accessoryAssets.find(a => a.category === value)
       if (accessoryAsset) {
         updatedAccessories[index].serialNumber = accessoryAsset.serialNumber
       }
@@ -185,86 +230,133 @@ export default function AllocationPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     
-    // Prepare data based on category
     const allocationData = {
-      ...formData,
       category,
-      accessories: category === "Laptop & Accessories" ? accessories : [],
-      mobileFields: category === "Mobile" ? mobileFields : undefined,
-      monitorFields: category === "Monitor" ? monitorFields : undefined
+      empId,
+      empName,
+      businessArea,
+      allocationDate,
+      remarks,
+      status,
+      ...(category === "Laptop & Accessories" && { laptopFields, accessories }),
+      ...(category === "Mobile" && { mobileFields }),
+      ...(category === "Monitor" && { monitorFields })
     }
     
     console.log("Allocation Data:", allocationData)
+    
+    if (isEditMode) {
+      console.log("Updating allocation:", editId)
+      // Update logic here
+    } else {
+      console.log("Creating new allocation")
+      // Create logic here
+    }
+    
     setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 3000)
+    setTimeout(() => {
+      setSubmitted(false)
+      router.push('/admin/assets-inventory')
+    }, 1500)
   }
 
   const resetForm = () => {
-    setFormData({
-      empId: "",
-      empName: "",
-      businessArea: "",
-      category: "",
-      laptopSerial: "",
-      laptopOwnership: "",
-      laptopMakeModel: "",
-      laptopConfiguration: "",
-      hasCharger: "no",
-      hasBag: "no",
-      allocationDate: new Date().toISOString().split("T")[0],
-      remarks: "",
-    })
     setCategory("")
-    setAccessories([{ type: "", serialNumber: "" }])
-    setMobileFields({
-      mobileSerial: "",
-      imei: "",
+    setEmpId("")
+    setEmpName("")
+    setBusinessArea("")
+    setAllocationDate(new Date().toISOString().split("T")[0])
+    setRemarks("")
+    setStatus("Active")
+    setLaptopFields({
+      laptopSrNo: "",
+      laptopOwnership: "Company",
       makeModel: "",
-      hasCharger: "no",
-      chargerSerial: "",
-      hasBackCover: "no",
-      hasSimCard: "no",
-      simNumber: "",
-      penalties: ""
+      configuration: "",
+      charger: "Yes",
+      bag: "No",
+      headphoneSrNo: "",
+      mouseSrNo: "",
+      keyboardSrNo: "",
+      dockStationSrNo: "",
+      macConnectHardware: ""
+    })
+    setMobileFields({
+      mobileSrNo: "",
+      imeiNo: "",
+      makeModel: "",
+      charger: "Yes",
+      chargerSrNo: "",
+      backCover: "No",
+      simCard: "No",
+      simNumber: ""
     })
     setMonitorFields({
-      monitorSerial: "",
+      monitorSrNo: "",
       makeModel: "",
-      hasPowerCable: "no",
-      hasHdmi: "no"
+      powerCable: "Yes",
+      hdmi: "Yes"
     })
+    setAccessories([{ type: "", serialNumber: "" }])
+    setIsEditMode(false)
   }
 
   return (
     <AdminLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Asset Allocation</h1>
-          <p className="text-muted-foreground mt-1">Allocate assets to employees</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {isEditMode ? "Edit Asset Allocation" : "Allocate New Asset"}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              {isEditMode 
+                ? "Update existing asset allocation details" 
+                : "Assign assets to employees with complete details"}
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/admin/assets-inventory')}
+            className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
+          >
+            Back to Inventory
+          </button>
         </div>
 
         {/* Form */}
-        <div className="bg-card rounded-lg shadow border border-border p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="bg-white rounded-xl shadow border border-gray-200 p-6 md:p-8">
           {submitted && (
-            <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-700 rounded-md">
-              Asset allocated successfully!
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg">
+              <div className="flex items-center">
+                <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">
+                  {isEditMode ? "Allocation updated successfully!" : "Asset allocated successfully!"}
+                </span>
+              </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Employee Section */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Employee Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Section 1: Employee Details */}
+            <div className="space-y-6">
+              <div className="border-b border-gray-200 pb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Employee Details</h2>
+                <p className="text-sm text-gray-600 mt-1">Select employee and business area</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">EMP ID *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    EMP ID <span className="text-red-500">*</span>
+                  </label>
                   <select
-                    name="empId"
-                    value={formData.empId}
-                    onChange={handleInputChange}
+                    value={empId}
+                    onChange={(e) => handleEmployeeSelect(e.target.value)}
                     required
-                    className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">Select Employee</option>
                     {mockEmployees.map((emp) => (
@@ -276,153 +368,184 @@ export default function AllocationPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">EMP Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    EMP Name
+                  </label>
                   <input
                     type="text"
-                    value={formData.empName}
+                    value={empName}
                     readOnly
-                    className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Business Area *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Area <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
-                    name="businessArea"
-                    value={formData.businessArea}
-                    onChange={handleInputChange}
-                    placeholder="Type business area"
+                    value={businessArea}
+                    onChange={(e) => setBusinessArea(e.target.value)}
+                    placeholder="e.g., Engineering, Sales, Marketing"
                     required
-                    className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Category Selection */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Category</h2>
-              <div className="w-full md:w-1/2">
+            {/* Section 2: Asset Category */}
+            <div className="space-y-6">
+              <div className="border-b border-gray-200 pb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Asset Category</h2>
+                <p className="text-sm text-gray-600 mt-1">Select the type of asset to allocate</p>
+              </div>
+              
+              <div className="max-w-md">
                 <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value as CategoryType)}
                   required
-                  className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select Category</option>
                   <option value="Laptop & Accessories">Laptop & Accessories</option>
-                  <option value="Mobile">Mobile</option>
-                  <option value="Monitor">Monitor</option>
+                  <option value="Mobile">Mobile Devices</option>
+                  <option value="Monitor">Monitors</option>
                 </select>
               </div>
             </div>
 
             {/* Laptop & Accessories Section */}
             {category === "Laptop & Accessories" && (
-              <>
-                <div className="space-y-4 pb-6 border-b border-border">
-                  <h2 className="text-lg font-semibold text-foreground">Laptop Details</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Laptop Sr. No. *</label>
-                      <select
-                        name="laptopSerial"
-                        value={formData.laptopSerial}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="">Select Serial Number</option>
-                        {laptopAssets.map((asset) => (
-                          <option key={asset.id} value={asset.serialNumber}>
-                            {asset.serialNumber} - {asset.name} {asset.model}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Laptop Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">Enter laptop specifications and accessories</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Laptop Serial No */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Laptop Sr. No. <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={laptopFields.laptopSrNo}
+                      onChange={(e) => handleLaptopFieldChange("laptopSrNo", e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Serial Number</option>
+                      {laptopAssets.map((asset) => (
+                        <option key={asset.id} value={asset.serialNumber}>
+                          {asset.serialNumber} - {asset.name} {asset.model}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Laptop Ownership</label>
-                      <input
-                        type="text"
-                        name="laptopOwnership"
-                        value={formData.laptopOwnership}
-                        readOnly
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
-                      />
-                    </div>
+                  {/* Laptop Ownership */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Laptop Ownership
+                    </label>
+                    <select
+                      value={laptopFields.laptopOwnership}
+                      onChange={(e) => handleLaptopFieldChange("laptopOwnership", e.target.value as OwnershipType)}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Company">Company</option>
+                      <option value="Employee">Employee</option>
+                      <option value="Leased">Leased</option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Make Model</label>
-                      <input
-                        type="text"
-                        value={formData.laptopMakeModel}
-                        readOnly
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
-                      />
-                    </div>
+                  {/* Make Model */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Make Model
+                    </label>
+                    <input
+                      type="text"
+                      value={laptopFields.makeModel}
+                      readOnly
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50"
+                    />
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Configuration</label>
-                      <input
-                        type="text"
-                        value={formData.laptopConfiguration}
-                        readOnly
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
-                      />
-                    </div>
+                  {/* Configuration */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Configuration
+                    </label>
+                    <input
+                      type="text"
+                      value={laptopFields.configuration}
+                      readOnly
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50"
+                    />
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Charger</label>
-                      <select
-                        name="hasCharger"
-                        value={formData.hasCharger}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
-                    </div>
+                  {/* Charger */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Charger
+                    </label>
+                    <select
+                      value={laptopFields.charger}
+                      onChange={(e) => handleLaptopFieldChange("charger", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-1">Bag</label>
-                      <select
-                        name="hasBag"
-                        value={formData.hasBag}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                      >
-                        <option value="no">No</option>
-                        <option value="yes">Yes</option>
-                      </select>
-                    </div>
+                  {/* Bag */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bag
+                    </label>
+                    <select
+                      value={laptopFields.bag}
+                      onChange={(e) => handleLaptopFieldChange("bag", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Accessories Section */}
-                <div className="space-y-4 pb-6 border-b border-border">
+                {/* Additional Accessories Section */}
+                <div className="space-y-4 pt-6 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-foreground">Accessories</h2>
+                    <div>
+                      <h3 className="text-base font-medium text-gray-900">Additional Accessories</h3>
+                      <p className="text-sm text-gray-600 mt-1">Add extra accessories if needed</p>
+                    </div>
                     <button
                       type="button"
                       onClick={addAccessory}
-                      className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all"
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
                     >
-                      + Add Accessory
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Accessory
                     </button>
                   </div>
                   
                   {accessories.map((accessory, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 bg-secondary/20 rounded-md">
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <label className="block text-sm font-medium text-foreground mb-1">Asset Type</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Asset Type</label>
                         <select
                           value={accessory.type}
                           onChange={(e) => handleAccessoryChange(index, 'type', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="">Select Type</option>
                           <option value="Headphone">Headphone</option>
@@ -433,23 +556,22 @@ export default function AllocationPage() {
                         </select>
                       </div>
                       
-                      <div className="flex items-end gap-2">
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-foreground mb-1">Serial Number</label>
-                          <input
-                            type="text"
-                            value={accessory.serialNumber}
-                            onChange={(e) => handleAccessoryChange(index, 'serialNumber', e.target.value)}
-                            readOnly={accessory.type === "Headphone" || accessory.type === "Mouse"}
-                            className={`w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${(accessory.type === "Headphone" || accessory.type === "Mouse") ? "bg-secondary" : ""}`}
-                          />
-                        </div>
-                        
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
+                        <input
+                          type="text"
+                          value={accessory.serialNumber}
+                          onChange={(e) => handleAccessoryChange(index, 'serialNumber', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      
+                      <div className="flex items-end">
                         {accessories.length > 1 && (
                           <button
                             type="button"
                             onClick={() => removeAccessory(index)}
-                            className="px-2.5 py-2 text-sm bg-red-500 text-white rounded-md hover:opacity-90 transition-all"
+                            className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
                           >
                             Remove
                           </button>
@@ -458,20 +580,28 @@ export default function AllocationPage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
 
             {/* Mobile Section */}
             {category === "Mobile" && (
-              <div className="space-y-4 pb-6 border-b border-border">
-                <h2 className="text-lg font-semibold text-foreground">Mobile Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Mobile Device Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">Enter mobile device specifications</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Mobile Sr. No */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Mobile Sr. No.</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mobile Sr. No. <span className="text-red-500">*</span>
+                    </label>
                     <select
-                      value={mobileFields.mobileSerial}
-                      onChange={(e) => handleMobileFieldChange('mobileSerial', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={mobileFields.mobileSrNo}
+                      onChange={(e) => handleMobileFieldChange("mobileSrNo", e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Serial Number</option>
                       {mobileAssets.map((asset) => (
@@ -482,79 +612,100 @@ export default function AllocationPage() {
                     </select>
                   </div>
 
+                  {/* IMEI No */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Make model</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      IMEI No.
+                    </label>
+                    <input
+                      type="text"
+                      value={mobileFields.imeiNo}
+                      onChange={(e) => handleMobileFieldChange("imeiNo", e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Make Model */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Make Model
+                    </label>
                     <input
                       type="text"
                       value={mobileFields.makeModel}
                       readOnly
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50"
                     />
                   </div>
 
+                  {/* Charger */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">IMEI No.</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Charger
+                    </label>
+                    <select
+                      value={mobileFields.charger}
+                      onChange={(e) => handleMobileFieldChange("charger", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                    </select>
+                  </div>
+
+                  {/* Charger Sr. No */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Charger Sr. No.
+                    </label>
                     <input
                       type="text"
-                      value={mobileFields.imei}
-                      readOnly
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
+                      value={mobileFields.chargerSrNo}
+                      onChange={(e) => handleMobileFieldChange("chargerSrNo", e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
+                  {/* Back Cover */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Charger</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Back Cover
+                    </label>
                     <select
-                      value={mobileFields.hasCharger}
-                      onChange={(e) => handleMobileFieldChange('hasCharger', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={mobileFields.backCover}
+                      onChange={(e) => handleMobileFieldChange("backCover", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
                     </select>
                   </div>
 
+                  {/* SIM Card */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Charger Sr. No.</label>
-                    <input
-                      type="text"
-                      value={mobileFields.chargerSerial}
-                      onChange={(e) => handleMobileFieldChange('chargerSerial', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Back Cover</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SIM Card
+                    </label>
                     <select
-                      value={mobileFields.hasBackCover}
-                      onChange={(e) => handleMobileFieldChange('hasBackCover', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={mobileFields.simCard}
+                      onChange={(e) => handleMobileFieldChange("simCard", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
                     </select>
                   </div>
 
+                  {/* SIM Number */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">SIM Card</label>
-                    <select
-                      value={mobileFields.hasSimCard}
-                      onChange={(e) => handleMobileFieldChange('hasSimCard', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">SIM Card Number</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SIM Number
+                    </label>
                     <input
                       type="text"
                       value={mobileFields.simNumber}
-                      onChange={(e) => handleMobileFieldChange('simNumber', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      onChange={(e) => handleMobileFieldChange("simNumber", e.target.value)}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -563,15 +714,23 @@ export default function AllocationPage() {
 
             {/* Monitor Section */}
             {category === "Monitor" && (
-              <div className="space-y-4 pb-6 border-b border-border">
-                <h2 className="text-lg font-semibold text-foreground">Monitor Details</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Monitor Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">Enter monitor specifications</p>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Monitor Sr. No */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Monitor Sr. No.</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Monitor Sr. No. <span className="text-red-500">*</span>
+                    </label>
                     <select
-                      value={monitorFields.monitorSerial}
-                      onChange={(e) => handleMonitorFieldChange('monitorSerial', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={monitorFields.monitorSrNo}
+                      onChange={(e) => handleMonitorFieldChange("monitorSrNo", e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Select Serial Number</option>
                       {monitorAssets.map((asset) => (
@@ -582,87 +741,119 @@ export default function AllocationPage() {
                     </select>
                   </div>
 
+                  {/* Make Model */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Make model</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Make Model
+                    </label>
                     <input
                       type="text"
                       value={monitorFields.makeModel}
                       readOnly
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md bg-secondary"
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg bg-gray-50"
                     />
                   </div>
 
+                  {/* Power Cable */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Power Cable</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Power Cable
+                    </label>
                     <select
-                      value={monitorFields.hasPowerCable}
-                      onChange={(e) => handleMonitorFieldChange('hasPowerCable', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={monitorFields.powerCable}
+                      onChange={(e) => handleMonitorFieldChange("powerCable", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
                     </select>
                   </div>
 
+                  {/* HDMI */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">HDMI</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      HDMI
+                    </label>
                     <select
-                      value={monitorFields.hasHdmi}
-                      onChange={(e) => handleMonitorFieldChange('hasHdmi', e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      value={monitorFields.hdmi}
+                      onChange={(e) => handleMonitorFieldChange("hdmi", e.target.value as "Yes" | "No")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
                     </select>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Allocation Section */}
-            <div className="space-y-4 pb-6 border-b border-border">
-              <h2 className="text-lg font-semibold text-foreground">Allocation Details</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">Allocation Date *</label>
-                  <input
-                    type="date"
-                    name="allocationDate"
-                    value={formData.allocationDate}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+            {/* Section 4: Allocation Details */}
+            {category && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Allocation Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">Set allocation date and status</p>
                 </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Allocation Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={allocationDate}
+                      onChange={(e) => setAllocationDate(e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
 
-                <div className="md:col-span-1">
-                  <label className="block text-sm font-medium text-foreground mb-1">Remarks</label>
-                  <textarea
-                    name="remarks"
-                    value={formData.remarks}
-                    onChange={handleInputChange}
-                    placeholder="Add any additional notes..."
-                    rows={3}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as "Active" | "Returned" | "Pending")}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Pending">Pending</option>
+                      <option value="Returned">Returned</option>
+                    </select>
+                  </div>
+
+                  <div className="md:col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Remarks
+                    </label>
+                    <textarea
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      placeholder="Add any additional notes or instructions..."
+                      rows={3}
+                      className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Buttons */}
-            <div className="flex gap-3 justify-end pt-2">
+            {/* Form Actions */}
+            <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-5 py-2 text-sm border border-border rounded-md text-foreground hover:bg-secondary transition-colors"
+                className="px-6 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                Reset
+                Reset Form
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all font-medium"
+                className="px-6 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Allocate Asset
+                {isEditMode ? "Update Allocation" : "Allocate Asset"}
               </button>
             </div>
           </form>
@@ -670,4 +861,92 @@ export default function AllocationPage() {
       </div>
     </AdminLayout>
   )
+}
+
+// Loading skeleton component
+function LoadingSkeleton() {
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse"></div>
+            <div className="h-4 bg-gray-100 rounded w-96 animate-pulse"></div>
+          </div>
+          <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow border border-gray-200 p-8">
+          <div className="space-y-8">
+            {/* Employee Details Skeleton */}
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-4 bg-gray-100 rounded w-32 animate-pulse"></div>
+                    <div className="h-10 bg-gray-100 rounded animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Asset Category Skeleton */}
+            <div className="space-y-4">
+              <div className="h-6 bg-gray-200 rounded w-48 animate-pulse"></div>
+              <div className="h-10 bg-gray-100 rounded w-96 animate-pulse"></div>
+            </div>
+            
+            {/* Form Actions Skeleton */}
+            <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
+              <div className="h-10 bg-gray-100 rounded w-32 animate-pulse"></div>
+              <div className="h-10 bg-blue-200 rounded w-48 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  )
+}
+
+// Types (keep them outside the component)
+type CategoryType = "" | "Laptop & Accessories" | "Mobile" | "Monitor"
+type AccessoryType = "" | "Headphone" | "Mouse" | "Keyboard" | "Dock-station" | "Mac-Connector"
+type OwnershipType = "Company" | "Employee" | "Leased"
+
+type AccessoryField = {
+  type: AccessoryType
+  serialNumber: string
+}
+
+type MobileFields = {
+  mobileSrNo: string
+  imeiNo: string
+  makeModel: string
+  charger: "Yes" | "No"
+  chargerSrNo: string
+  backCover: "Yes" | "No"
+  simCard: "Yes" | "No"
+  simNumber: string
+}
+
+type MonitorFields = {
+  monitorSrNo: string
+  makeModel: string
+  powerCable: "Yes" | "No"
+  hdmi: "Yes" | "No"
+}
+
+type LaptopFields = {
+  laptopSrNo: string
+  laptopOwnership: OwnershipType
+  makeModel: string
+  configuration: string
+  charger: "Yes" | "No"
+  bag: "Yes" | "No"
+  headphoneSrNo: string
+  mouseSrNo: string
+  keyboardSrNo: string
+  dockStationSrNo: string
+  macConnectHardware: string
 }

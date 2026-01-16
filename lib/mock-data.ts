@@ -1,5 +1,51 @@
 import type { User, Asset, Allocation } from "./types"
 
+// Base types (you might need to add these to your types.ts)
+export interface BaseAllocation {
+  id: string
+  empId: string
+  empName: string
+  businessArea: string
+  allocationDate: string
+  status: 'active' | 'returned' | 'pending' | 'approved'
+  remarks?: string
+}
+
+export interface LaptopAllocation extends BaseAllocation {
+  category: 'laptop'
+  laptopSrNo: string
+  laptopOwnership: 'company' | 'employee' | 'leased'
+  makeModel: string
+  configuration: string
+  charger: 'yes' | 'no'
+  bag: 'yes' | 'no'
+  headphoneSrNo?: string
+  mouseSrNo?: string
+  keyboardSrNo?: string
+  dockStationSrNo?: string
+  macConnectHardware?: string
+}
+
+export interface MobileAllocation extends BaseAllocation {
+  category: 'mobile'
+  mobileSrNo: string
+  imeiNo: string
+  makeModel: string
+  charger: 'yes' | 'no'
+  chargerSrNo?: string
+  backCover: 'yes' | 'no'
+  simCard: 'yes' | 'no'
+  simNumber?: string
+}
+
+export interface MonitorAllocation extends BaseAllocation {
+  category: 'monitor'
+  monitorSrNo: string
+  makeModel: string
+  powerCable: 'yes' | 'no'
+  hdmi: 'yes' | 'no'
+}
+
 export const mockUsers: User[] = [
   {
     id: "1",
@@ -376,6 +422,7 @@ export const mockAssets: Asset[] = [
   },
 ]
 
+// Legacy allocations (keep for compatibility)
 export const mockAllocations: Allocation[] = [
   {
     id: "1",
@@ -425,6 +472,163 @@ export const mockAllocations: Allocation[] = [
     remarks: "Temporary dock station for testing",
     status: "pending",
   },
+]
+
+// New allocation data types
+export const mockLaptopAllocations: LaptopAllocation[] = [
+  {
+    id: "LAP001",
+    empId: "EMP001",
+    empName: "John Doe",
+    businessArea: "Engineering",
+    laptopSrNo: "DLXPS13-001",
+    laptopOwnership: "company",
+    makeModel: "Dell XPS 13",
+    configuration: "i7, 16GB RAM, 512GB SSD",
+    charger: "yes",
+    bag: "yes",
+    headphoneSrNo: "SNYHP-001",
+    mouseSrNo: "LGTMS-001",
+    keyboardSrNo: "LGTKB-001",
+    allocationDate: "2024-01-15",
+    status: "active",
+    remarks: "Primary development machine",
+    category: "laptop"
+  },
+  {
+    id: "LAP002",
+    empId: "EMP002",
+    empName: "Jane Smith",
+    businessArea: "Product Management",
+    laptopSrNo: "MBP14-001",
+    laptopOwnership: "company",
+    makeModel: "Apple MacBook Pro 14\"",
+    configuration: "M2, 16GB RAM, 256GB SSD",
+    charger: "yes",
+    bag: "no",
+    dockStationSrNo: "DLDKS-001",
+    macConnectHardware: "APLMC-001",
+    allocationDate: "2024-01-10",
+    status: "active",
+    remarks: "Product design and prototyping",
+    category: "laptop"
+  },
+  {
+    id: "LAP003",
+    empId: "EMP003",
+    empName: "Robert Johnson",
+    businessArea: "Design",
+    laptopSrNo: "LNTKP-001",
+    laptopOwnership: "employee",
+    makeModel: "Lenovo ThinkPad X1 Carbon",
+    configuration: "i5, 8GB RAM, 256GB SSD",
+    charger: "yes",
+    bag: "yes",
+    allocationDate: "2024-01-05",
+    status: "returned",
+    remarks: "Employee-owned laptop for UI/UX work",
+    category: "laptop"
+  }
+]
+
+export const mockMobileAllocations: MobileAllocation[] = [
+  {
+    id: "MOB001",
+    empId: "EMP002",
+    empName: "Jane Smith",
+    businessArea: "Product Management",
+    mobileSrNo: "IPH14-001",
+    imeiNo: "123456789012345",
+    makeModel: "iPhone 14 Pro",
+    charger: "yes",
+    chargerSrNo: "CHG-IPH001",
+    backCover: "yes",
+    simCard: "yes",
+    simNumber: "+12345678901",
+    allocationDate: "2024-01-12",
+    status: "active",
+    remarks: "Company mobile for client communications",
+    category: "mobile"
+  },
+  {
+    id: "MOB002",
+    empId: "EMP004",
+    empName: "Sarah Williams",
+    businessArea: "Sales",
+    mobileSrNo: "SGS23-001",
+    imeiNo: "234567890123456",
+    makeModel: "Samsung Galaxy S23 Ultra",
+    charger: "yes",
+    chargerSrNo: "CHG-SAM001",
+    backCover: "no",
+    simCard: "yes",
+    simNumber: "+12345678902",
+    allocationDate: "2024-01-08",
+    status: "active",
+    remarks: "Field sales device",
+    category: "mobile"
+  },
+  {
+    id: "MOB003",
+    empId: "EMP005",
+    empName: "Michael Brown",
+    businessArea: "Operations",
+    mobileSrNo: "GPXL7-001",
+    imeiNo: "345678901234567",
+    makeModel: "Google Pixel 7 Pro",
+    charger: "no",
+    backCover: "yes",
+    simCard: "no",
+    allocationDate: "2024-01-03",
+    status: "pending",
+    remarks: "Testing device for mobile app development",
+    category: "mobile"
+  }
+]
+
+export const mockMonitorAllocations: MonitorAllocation[] = [
+  {
+    id: "MON001",
+    empId: "EMP001",
+    empName: "John Doe",
+    businessArea: "Engineering",
+    monitorSrNo: "DLMON-001",
+    makeModel: "Dell 27\" UltraSharp",
+    powerCable: "yes",
+    hdmi: "yes",
+    allocationDate: "2024-01-14",
+    status: "active",
+    remarks: "Primary monitor for development work",
+    category: "monitor"
+  },
+  {
+    id: "MON002",
+    empId: "EMP002",
+    empName: "Jane Smith",
+    businessArea: "Product Management",
+    monitorSrNo: "LGMON-001",
+    makeModel: "LG 34\" UltraWide",
+    powerCable: "yes",
+    hdmi: "yes",
+    allocationDate: "2024-01-09",
+    status: "active",
+    remarks: "Wide monitor for product roadmapping",
+    category: "monitor"
+  },
+  {
+    id: "MON003",
+    empId: "EMP003",
+    empName: "Robert Johnson",
+    businessArea: "Design",
+    monitorSrNo: "SGMON-001",
+    makeModel: "Samsung 32\" Odyssey",
+    powerCable: "yes",
+    hdmi: "no",
+    allocationDate: "2024-01-04",
+    status: "returned",
+    remarks: "Color-accurate monitor for design work",
+    category: "monitor"
+  }
 ]
 
 export const mockEmployees: User[] = [
