@@ -8,14 +8,27 @@ import { useEffect, useState } from "react"
 import AdminLayout from "@/components/admin-layout"
 import { mockAssets } from "@/lib/mock-data"
 import { TableSearchSort } from "@/components/table-search-sort"
+import { 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Plus,
+  Check,
+  X
+} from "lucide-react"
 
 export default function ReturnAssetPage() {
   const { user } = useAuth()
   const router = useRouter()
-  const [assets, setAssets] = useState(mockAssets)
-  const [filteredAssets, setFilteredAssets] = useState(mockAssets)
+  const [assets, setAssets] = useState(mockAssets.map(asset => ({
+    ...asset,
+    ownership: asset.ownership || "company",
+    imeiNumber: asset.imeiNumber || "",
+    makeModel: asset.makeModel || asset.model,
+  })))
+  const [filteredAssets, setFilteredAssets] = useState(assets)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<(typeof mockAssets)[0] | null>(null)
+  const [editForm, setEditForm] = useState<(typeof assets)[0] | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newAssetForm, setNewAssetForm] = useState({
     assetId: "",
@@ -27,6 +40,9 @@ export default function ReturnAssetPage() {
     purchaseDate: "",
     warrantyExpiry: "",
     status: "available",
+    ownership: "company",
+    makeModel: "",
+    imeiNumber: "",
   })
   const [searchTerm, setSearchTerm] = useState("")
   const [sortKey, setSortKey] = useState("assetId")
@@ -48,7 +64,9 @@ export default function ReturnAssetPage() {
           asset.assetId.toLowerCase().includes(searchTerm.toLowerCase()) ||
           asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           asset.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          asset.model.toLowerCase().includes(searchTerm.toLowerCase()),
+          asset.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          asset.imeiNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          asset.ownership?.toLowerCase().includes(searchTerm.toLowerCase()),
       )
     }
 
@@ -74,6 +92,10 @@ export default function ReturnAssetPage() {
           aVal = a.status
           bVal = b.status
           break
+        case "ownership":
+          aVal = a.ownership || ""
+          bVal = b.ownership || ""
+          break
         default:
           aVal = a.assetId
           bVal = b.assetId
@@ -96,7 +118,7 @@ export default function ReturnAssetPage() {
 
   if (!user) return null
 
-  const handleEdit = (asset: (typeof mockAssets)[0]) => {
+  const handleEdit = (asset: (typeof assets)[0]) => {
     setEditingId(asset.id)
     setEditForm({ ...asset })
   }
@@ -121,7 +143,7 @@ export default function ReturnAssetPage() {
       return
     }
 
-    const newAsset: (typeof mockAssets)[0] = {
+    const newAsset: (typeof assets)[0] = {
       id: String(assets.length + 1),
       ...newAssetForm,
     }
@@ -138,6 +160,9 @@ export default function ReturnAssetPage() {
       purchaseDate: "",
       warrantyExpiry: "",
       status: "available",
+      ownership: "company",
+      makeModel: "",
+      imeiNumber: "",
     })
   }
 
@@ -168,6 +193,21 @@ export default function ReturnAssetPage() {
     }
   }
 
+  const getOwnershipBadgeClass = (ownership: string) => {
+    switch (ownership) {
+      case "company":
+        return "bg-purple-100 text-purple-700"
+      case "leased":
+        return "bg-orange-100 text-orange-700"
+      case "employee":
+        return "bg-cyan-100 text-cyan-700"
+      case "third-party":
+        return "bg-pink-100 text-pink-700"
+      default:
+        return "bg-gray-100 text-gray-700"
+    }
+  }
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -179,9 +219,10 @@ export default function ReturnAssetPage() {
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all font-medium"
+            className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all font-medium flex items-center gap-2"
           >
-            + Add Asset
+            <Plus size={18} />
+            Add Asset
           </button>
         </div>
 
@@ -192,12 +233,13 @@ export default function ReturnAssetPage() {
             setSortKey(key)
             setSortOrder(order)
           }}
-          searchPlaceholder="Search by Asset ID, Name, Category, or Model..."
+          searchPlaceholder="Search by Asset ID, Name, Category, Model, IMEI or Ownership..."
           sortOptions={[
             { key: "assetId", label: "Asset ID" },
             { key: "name", label: "Asset Name" },
             { key: "category", label: "Category" },
             { key: "status", label: "Status" },
+            { key: "ownership", label: "Ownership" },
           ]}
         />
 
@@ -207,10 +249,12 @@ export default function ReturnAssetPage() {
             <thead className="border-b border-border">
               <tr className="text-left text-muted-foreground">
                 <th className="pb-3 font-semibold">Asset ID</th>
-                <th className="pb-3 font-semibold">Name</th>
+                <th className="pb-3 font-semibold">Asset Name</th>
                 <th className="pb-3 font-semibold">Category</th>
-                <th className="pb-3 font-semibold">Model</th>
+                <th className="pb-3 font-semibold">Make Model</th>
                 <th className="pb-3 font-semibold">Serial Number</th>
+                <th className="pb-3 font-semibold">IMEI No.</th>
+                <th className="pb-3 font-semibold">Ownership</th>
                 <th className="pb-3 font-semibold">Status</th>
                 <th className="pb-3 font-semibold">Actions</th>
               </tr>
@@ -218,29 +262,53 @@ export default function ReturnAssetPage() {
             <tbody>
               {filteredAssets.map((asset) => (
                 <tr key={asset.id} className="border-b border-border hover:bg-secondary transition-colors">
-                  <td className="py-3">{asset.assetId}</td>
+                  <td className="py-3 font-medium">{asset.assetId}</td>
                   <td className="py-3">{asset.name}</td>
                   <td className="py-3">{asset.category}</td>
-                  <td className="py-3">{asset.model}</td>
-                  <td className="py-3 text-xs text-muted-foreground">{asset.serialNumber}</td>
                   <td className="py-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(asset.status)}`}>
-                      {asset.status.replace("_", " ")}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{asset.makeModel || asset.model}</span>
+                      {asset.configuration && (
+                        <span className="text-xs text-muted-foreground">{asset.configuration}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 text-muted-foreground">{asset.serialNumber}</td>
+                  <td className="py-3 text-muted-foreground">{asset.imeiNumber}</td>
+                  <td className="py-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getOwnershipBadgeClass(asset.ownership || "company")}`}>
+                      {asset.ownership ? asset.ownership.replace("-", " ").toUpperCase() : "COMPANY"}
                     </span>
                   </td>
-                  <td className="py-3 space-x-2">
-                    <button
-                      onClick={() => handleEdit(asset)}
-                      className="px-3 py-1 bg-primary text-primary-foreground rounded text-xs font-medium hover:opacity-90"
-                    >
-                      View/Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(asset.id)}
-                      className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-xs font-medium hover:opacity-90"
-                    >
-                      Delete
-                    </button>
+                  <td className="py-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(asset.status)}`}>
+                      {asset.status.replace("_", " ").toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="py-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(asset)}
+                        className="p-2  text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                        title="View/Edit"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(asset)}
+                        className="p-2  text-green-700 rounded hover:bg-green-200 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(asset.id)}
+                        className="p-2  text-red-700 rounded hover:bg-red-200 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -253,11 +321,21 @@ export default function ReturnAssetPage() {
 
         {showAddForm && (
           <div className="fixed inset-0 bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold text-foreground mb-6">Add New Asset</h2>
+            <div className="bg-card rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Add New Asset</h2>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="p-2 hover:bg-secondary rounded-full transition-colors"
+                  title="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Asset ID */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Asset ID *</label>
                     <input
@@ -270,8 +348,9 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Asset Name */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Name *</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Asset Name *</label>
                     <input
                       type="text"
                       name="name"
@@ -282,6 +361,7 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Category */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Category</label>
                     <input
@@ -294,8 +374,22 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Make Model */}
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">Model</label>
+                    <label className="block text-sm font-medium text-foreground mb-2">Make Model</label>
+                    <input
+                      type="text"
+                      name="makeModel"
+                      value={newAssetForm.makeModel}
+                      onChange={handleNewAssetInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., Dell XPS 13 9310"
+                    />
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Make Model</label>
                     <input
                       type="text"
                       name="model"
@@ -306,6 +400,7 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Serial Number */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Serial Number</label>
                     <input
@@ -318,6 +413,36 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* IMEI Number */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">IMEI Number</label>
+                    <input
+                      type="text"
+                      name="imeiNumber"
+                      value={newAssetForm.imeiNumber}
+                      onChange={handleNewAssetInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g., 123456789012345"
+                    />
+                  </div>
+
+                  {/* Ownership */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Ownership</label>
+                    <select
+                      name="ownership"
+                      value={newAssetForm.ownership}
+                      onChange={handleNewAssetInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="company">Company Owned</option>
+                      <option value="leased">Leased</option>
+                      <option value="employee">Employee Owned</option>
+                      <option value="third-party">Third Party</option>
+                    </select>
+                  </div>
+
+                  {/* Configuration */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Configuration</label>
                     <input
@@ -330,6 +455,7 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Purchase Date */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Purchase Date</label>
                     <input
@@ -341,6 +467,7 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Warranty Expiry */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Warranty Expiry</label>
                     <input
@@ -352,6 +479,7 @@ export default function ReturnAssetPage() {
                     />
                   </div>
 
+                  {/* Status */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Status</label>
                     <select
@@ -368,17 +496,19 @@ export default function ReturnAssetPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 pt-4 border-t border-border">
                   <button
                     onClick={() => setShowAddForm(false)}
-                    className="flex-1 px-4 py-2 border border-border rounded-md text-foreground hover:bg-secondary transition-colors"
+                    className="flex-1 px-4 py-2 border border-border rounded-md text-foreground hover:bg-secondary transition-colors flex items-center justify-center gap-2"
                   >
+                    <X size={18} />
                     Cancel
                   </button>
                   <button
                     onClick={handleAddAsset}
-                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all"
+                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all flex items-center justify-center gap-2"
                   >
+                    <Check size={18} />
                     Add Asset
                   </button>
                 </div>
@@ -390,84 +520,137 @@ export default function ReturnAssetPage() {
         {/* Edit Modal */}
         {editingId && editForm && (
           <div className="fixed inset-0 bg-black/70 bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-lg p-8 max-w-md w-full max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold text-foreground mb-4">Edit Asset</h2>
+            <div className="bg-card rounded-lg p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-foreground">Edit Asset</h2>
+                <button
+                  onClick={() => {
+                    setEditingId(null)
+                    setEditForm(null)
+                  }}
+                  className="p-2 hover:bg-secondary rounded-full transition-colors"
+                  title="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Asset ID</label>
-                  <input
-                    type="text"
-                    name="assetId"
-                    value={editForm.assetId}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Asset ID</label>
+                    <input
+                      type="text"
+                      name="assetId"
+                      value={editForm.assetId}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Asset Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={editForm.name}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Category</label>
+                    <input
+                      type="text"
+                      name="category"
+                      value={editForm.category}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Make Model</label>
+                    <input
+                      type="text"
+                      name="makeModel"
+                      value={editForm.makeModel || ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Serial Number</label>
+                    <input
+                      type="text"
+                      name="serialNumber"
+                      value={editForm.serialNumber}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">IMEI Number</label>
+                    <input
+                      type="text"
+                      name="imeiNumber"
+                      value={editForm.imeiNumber || ""}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Ownership</label>
+                    <select
+                      name="ownership"
+                      value={editForm.ownership || "company"}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="company">Company Owned</option>
+                      <option value="leased">Leased</option>
+                      <option value="employee">Employee Owned</option>
+                      <option value="third-party">Third Party</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+                    <select
+                      name="status"
+                      value={editForm.status}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="available">Available</option>
+                      <option value="allocated">Allocated</option>
+                      <option value="under_repair">Under Repair</option>
+                      <option value="returned">Returned</option>
+                    </select>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={editForm.name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    value={editForm.category}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Model</label>
-                  <input
-                    type="text"
-                    name="model"
-                    value={editForm.model}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Status</label>
-                  <select
-                    name="status"
-                    value={editForm.status}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="available">Available</option>
-                    <option value="allocated">Allocated</option>
-                    <option value="under_repair">Under Repair</option>
-                    <option value="returned">Returned</option>
-                  </select>
-                </div>
-
-                <div className="flex gap-3 mt-6">
+                <div className="flex gap-3 mt-6 pt-4 border-t border-border">
                   <button
                     onClick={() => {
                       setEditingId(null)
                       setEditForm(null)
                     }}
-                    className="flex-1 px-4 py-2 border border-border rounded-md text-foreground hover:bg-secondary transition-colors"
+                    className="flex-1 px-4 py-2 border border-border rounded-md text-foreground hover:bg-secondary transition-colors flex items-center justify-center gap-2"
                   >
+                    <X size={18} />
                     Cancel
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all"
+                    className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:opacity-90 transition-all flex items-center justify-center gap-2"
                   >
-                    Save
+                    <Check size={18} />
+                    Save Changes
                   </button>
                 </div>
               </div>
