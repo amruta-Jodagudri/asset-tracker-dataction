@@ -71,11 +71,9 @@ function AllocationContent() {
     hdmi: "Yes"
   })
   
-  // Accessories
-  const [accessories, setAccessories] = useState<AccessoryField[]>([
-    { type: "", serialNumber: "" }
-  ])
-  
+  // Accessories Fields
+  const [accessoriesFields, setAccessoriesFields] = useState<AccessoryAllocationField[]>([])
+
   const [submitted, setSubmitted] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [mockEmployees, setMockEmployees] = useState<any[]>([])
@@ -86,7 +84,7 @@ function AllocationContent() {
   const mobileAssets = mockAssets.filter(asset => asset.category === "Mobile")
   const monitorAssets = mockAssets.filter(asset => asset.category === "Monitor")
   const accessoryAssets = mockAssets.filter(asset => 
-    ["Headphone", "Mouse", "Keyboard", "Dock-station", "Mac-Connector"].includes(asset.category)
+    ["Headphone", "Mouse", "Keyboard", "Dock-station", "Mac-Connector", "Charger", "Bag", "Cable", "Adapter", "Stand", "Case", "Screen Protector"].includes(asset.category)
   )
 
   useEffect(() => {
@@ -140,9 +138,38 @@ function AllocationContent() {
         setBusinessArea("Engineering")
         setRemarks("Primary development machine")
         setStatus("Active")
+      } else if (editType === "Accessories") {
+        setAccessoriesFields([
+          {
+            id: "1",
+            accessoryType: "Headphone",
+            accessorySrNo: "SNYHP-001",
+            makeModel: "Sony WH-1000XM5",
+            condition: "New",
+            quantity: "1"
+          },
+          {
+            id: "2",
+            accessoryType: "Mouse",
+            accessorySrNo: "LGTMS-001",
+            makeModel: "Logitech MX Master 3S",
+            condition: "New",
+            quantity: "1"
+          }
+        ])
+        setEmpId("EMP001")
+        setEmpName("John Doe")
+        setBusinessArea("Engineering")
+        setRemarks("Additional accessories for workstation")
+        setStatus("Active")
+      }
+    } else {
+      // Initialize with one accessory field for new allocation
+      if (category === "Accessories" && accessoriesFields.length === 0) {
+        addAccessory()
       }
     }
-  }, [user, router, editId, editType, isLoading])
+  }, [user, router, editId, editType, isLoading, category])
 
   if (!user || isLoading) return <LoadingSkeleton />
 
@@ -201,29 +228,48 @@ function AllocationContent() {
     }
   }
 
-  const handleAccessoryChange = (index: number, field: keyof AccessoryField, value: string) => {
-    const updatedAccessories = [...accessories]
+  const handleAccessoryFieldChange = (index: number, field: keyof AccessoryAllocationField, value: string) => {
+    const updatedAccessories = [...accessoriesFields]
     updatedAccessories[index] = { ...updatedAccessories[index], [field]: value }
     
-    // Auto-fill serial number for selected accessory type
-    if (field === 'type' && value) {
-      const accessoryAsset = accessoryAssets.find(a => a.category === value)
+    // Auto-fill make model when serial is selected
+    if (field === 'accessorySrNo' && value) {
+      const accessoryAsset = accessoryAssets.find(a => a.serialNumber === value)
       if (accessoryAsset) {
-        updatedAccessories[index].serialNumber = accessoryAsset.serialNumber
+        updatedAccessories[index].makeModel = `${accessoryAsset.name} ${accessoryAsset.model}`
+        updatedAccessories[index].accessoryType = accessoryAsset.category
+      }
+    } else if (field === 'accessoryType' && value && !updatedAccessories[index].accessorySrNo) {
+      // Filter available assets by type
+      const availableAssets = accessoryAssets.filter(a => a.category === value && a.status === "available")
+      if (availableAssets.length > 0) {
+        updatedAccessories[index].accessorySrNo = availableAssets[0].serialNumber
+        updatedAccessories[index].makeModel = `${availableAssets[0].name} ${availableAssets[0].model}`
       }
     }
     
-    setAccessories(updatedAccessories)
+    setAccessoriesFields(updatedAccessories)
   }
 
   const addAccessory = () => {
-    setAccessories([...accessories, { type: "", serialNumber: "" }])
+    const newId = (accessoriesFields.length + 1).toString()
+    setAccessoriesFields([
+      ...accessoriesFields,
+      {
+        id: newId,
+        accessoryType: "",
+        accessorySrNo: "",
+        makeModel: "",
+        condition: "New",
+        quantity: "1"
+      }
+    ])
   }
 
   const removeAccessory = (index: number) => {
-    if (accessories.length > 1) {
-      const updatedAccessories = accessories.filter((_, i) => i !== index)
-      setAccessories(updatedAccessories)
+    if (accessoriesFields.length > 1) {
+      const updatedAccessories = accessoriesFields.filter((_, i) => i !== index)
+      setAccessoriesFields(updatedAccessories)
     }
   }
 
@@ -238,9 +284,10 @@ function AllocationContent() {
       allocationDate,
       remarks,
       status,
-      ...(category === "Laptop & Accessories" && { laptopFields, accessories }),
+      ...(category === "Laptop & Accessories" && { laptopFields }),
       ...(category === "Mobile" && { mobileFields }),
-      ...(category === "Monitor" && { monitorFields })
+      ...(category === "Monitor" && { monitorFields }),
+      ...(category === "Accessories" && { accessories: accessoriesFields })
     }
     
     console.log("Allocation Data:", allocationData)
@@ -256,7 +303,7 @@ function AllocationContent() {
     setSubmitted(true)
     setTimeout(() => {
       setSubmitted(false)
-      router.push('/admin/assets-inventory')
+      router.push('/admin/assets')
     }, 1500)
   }
 
@@ -297,7 +344,7 @@ function AllocationContent() {
       powerCable: "Yes",
       hdmi: "Yes"
     })
-    setAccessories([{ type: "", serialNumber: "" }])
+    setAccessoriesFields([])
     setIsEditMode(false)
   }
 
@@ -307,17 +354,12 @@ function AllocationContent() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900">
               {isEditMode ? "Edit Asset Allocation" : "Allocate New Asset"}
             </h1>
-            <p className="text-gray-600 mt-1">
-              {isEditMode 
-                ? "Update existing asset allocation details" 
-                : "Assign assets to employees with complete details"}
-            </p>
           </div>
           <button
-            onClick={() => router.push('/admin/assets-inventory')}
+            onClick={() => router.push('/admin/assets')}
             className="px-4 py-2.5 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm"
           >
             Back to Inventory
@@ -413,6 +455,7 @@ function AllocationContent() {
                   <option value="Laptop & Accessories">Laptop & Accessories</option>
                   <option value="Mobile">Mobile Devices</option>
                   <option value="Monitor">Monitors</option>
+                  <option value="Accessories">Accessories</option>
                 </select>
               </div>
             </div>
@@ -517,68 +560,6 @@ function AllocationContent() {
                       <option value="No">No</option>
                     </select>
                   </div>
-                </div>
-
-                {/* Additional Accessories Section */}
-                <div className="space-y-4 pt-6 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-base font-medium text-gray-900">Additional Accessories</h3>
-                      <p className="text-sm text-gray-600 mt-1">Add extra accessories if needed</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addAccessory}
-                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Add Accessory
-                    </button>
-                  </div>
-                  
-                  {accessories.map((accessory, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Asset Type</label>
-                        <select
-                          value={accessory.type}
-                          onChange={(e) => handleAccessoryChange(index, 'type', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="">Select Type</option>
-                          <option value="Headphone">Headphone</option>
-                          <option value="Mouse">Mouse</option>
-                          <option value="Keyboard">Keyboard</option>
-                          <option value="Dock-station">Dock-station</option>
-                          <option value="Mac-Connector">Mac-Connector</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
-                        <input
-                          type="text"
-                          value={accessory.serialNumber}
-                          onChange={(e) => handleAccessoryChange(index, 'serialNumber', e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      
-                      <div className="flex items-end">
-                        {accessories.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeAccessory(index)}
-                            className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
             )}
@@ -787,6 +768,115 @@ function AllocationContent() {
               </div>
             )}
 
+            {/* Accessories Section */}
+            {category === "Accessories" && (
+              <div className="space-y-6">
+                <div className="border-b border-gray-200 pb-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Accessories</h2>
+                      <p className="text-sm text-gray-600 mt-1">Add accessories for allocation</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addAccessory}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Accessory
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  {accessoriesFields.map((accessory, index) => (
+                    <div key={accessory.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-medium text-gray-900">Accessory #{index + 1}</h3>
+                        {accessoriesFields.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeAccessory(index)}
+                            className="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Accessory Type */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Accessory Type <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={accessory.accessoryType}
+                            onChange={(e) => handleAccessoryFieldChange(index, 'accessoryType', e.target.value)}
+                            required
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">Select Type</option>
+                            <option value="Headphone">Headphone</option>
+                            <option value="Mouse">Mouse</option>
+                            <option value="Keyboard">Keyboard</option>
+                            <option value="Dock-station">Dock Station</option>
+                            <option value="Mac-Connector">Mac Connector</option>
+                            <option value="Charger">Charger</option>
+                            <option value="Bag">Bag</option>
+                            <option value="Cable">Cable</option>
+                            <option value="Adapter">Adapter</option>
+                            <option value="Stand">Stand</option>
+                            <option value="Case">Case</option>
+                            <option value="Screen Protector">Screen Protector</option>
+                          </select>
+                        </div>
+                        
+                        {/* Accessory Serial Number */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Accessory Sr. No. <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={accessory.accessorySrNo}
+                            onChange={(e) => handleAccessoryFieldChange(index, 'accessorySrNo', e.target.value)}
+                            required
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="">Select Serial Number</option>
+                            {accessoryAssets
+                              .filter(asset => !accessory.accessoryType || asset.category === accessory.accessoryType)
+                              .map((asset) => (
+                                <option key={asset.id} value={asset.serialNumber}>
+                                  {asset.serialNumber} - {asset.name} {asset.model}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        
+                        {/* Make Model */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Make Model
+                          </label>
+                          <input
+                            type="text"
+                            value={accessory.makeModel}
+                            readOnly
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Section 4: Allocation Details */}
             {category && (
               <div className="space-y-6">
@@ -910,13 +1000,17 @@ function LoadingSkeleton() {
 }
 
 // Types (keep them outside the component)
-type CategoryType = "" | "Laptop & Accessories" | "Mobile" | "Monitor"
-type AccessoryType = "" | "Headphone" | "Mouse" | "Keyboard" | "Dock-station" | "Mac-Connector"
+type CategoryType = "" | "Laptop & Accessories" | "Mobile" | "Monitor" | "Accessories"
+type AccessoryType = "" | "Headphone" | "Mouse" | "Keyboard" | "Dock-station" | "Mac-Connector" | "Charger" | "Bag" | "Cable" | "Adapter" | "Stand" | "Case" | "Screen Protector"
 type OwnershipType = "Company" | "Employee" | "Leased"
 
-type AccessoryField = {
-  type: AccessoryType
-  serialNumber: string
+type AccessoryAllocationField = {
+  id: string
+  accessoryType: AccessoryType
+  accessorySrNo: string
+  makeModel: string
+  condition: "New" | "Like New" | "Good" | "Fair" | "Poor"
+  quantity: string
 }
 
 type MobileFields = {

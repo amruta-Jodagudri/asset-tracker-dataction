@@ -4,28 +4,28 @@ import { useAuth } from "@/lib/context";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import AdminLayout from "@/components/admin-layout";
-import { TableSearchSort } from "@/components/table-search-sort";
 import Link from "next/link";
 import {
   mockLaptopAllocations,
   mockMobileAllocations,
   mockMonitorAllocations,
+  mockAccessoriesAllocations,
   type LaptopAllocation,
   type MobileAllocation,
   type MonitorAllocation,
+  type AccessoriesAllocation,
 } from "@/lib/mock-data";
 import ViewAllocationModal from "@/components/view-allocation-modal";
 import {
-  Edit2,
   Eye,
+  Edit,
   Trash2,
   ChevronDown,
   ChevronUp,
   Download,
-  Edit,
 } from "lucide-react";
 
-type AssetType = "laptop" | "mobile" | "monitor";
+type AssetType = "laptop" | "mobile" | "monitor" | "accessories";
 
 export default function AdminAssetsInventory() {
   const { user } = useAuth();
@@ -48,6 +48,9 @@ export default function AdminAssetsInventory() {
   const [monitorAllocations, setMonitorAllocations] = useState<
     MonitorAllocation[]
   >(mockMonitorAllocations);
+  const [accessoriesAllocations, setAccessoriesAllocations] = useState<
+    AccessoriesAllocation[]
+  >(mockAccessoriesAllocations);
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -158,6 +161,22 @@ export default function AdminAssetsInventory() {
         });
         setMonitorAllocations(sortedMonitors);
         break;
+
+      case "accessories":
+        const sortedAccessories = filterAndSort(accessoriesAllocations, (item) => {
+          switch (sortKey) {
+            case "empName":
+              return item.empName;
+            case "allocationDate":
+              return item.allocationDate;
+            case "status":
+              return item.status;
+            default:
+              return item.allocationDate;
+          }
+        });
+        setAccessoriesAllocations(sortedAccessories);
+        break;
     }
   }, [searchTerm, sortKey, sortOrder, activeTab]);
 
@@ -165,7 +184,13 @@ export default function AdminAssetsInventory() {
 
   // Handle allocation actions
   const handleEdit = (id: string, type: AssetType) => {
-    router.push(`/admin/allocation?edit=${id}&type=${type}`);
+    const typeMap = {
+      'laptop': 'Laptop & Accessories',
+      'mobile': 'Mobile',
+      'monitor': 'Monitor',
+      'accessories': 'Accessories'
+    };
+    router.push(`/admin/allocation?edit=${id}&type=${typeMap[type]}`);
   };
 
   const handleView = (id: string, type: AssetType) => {
@@ -179,6 +204,9 @@ export default function AdminAssetsInventory() {
         break;
       case "monitor":
         data = monitorAllocations.find((item) => item.id === id);
+        break;
+      case "accessories":
+        data = accessoriesAllocations.find((item) => item.id === id);
         break;
     }
 
@@ -206,6 +234,11 @@ export default function AdminAssetsInventory() {
           break;
         case "monitor":
           setMonitorAllocations((prev) =>
+            prev.filter((item) => item.id !== id),
+          );
+          break;
+        case "accessories":
+          setAccessoriesAllocations((prev) =>
             prev.filter((item) => item.id !== id),
           );
           break;
@@ -253,12 +286,9 @@ export default function AdminAssetsInventory() {
         {/* Header */}
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-3xl font-bold text-gray-900">
               Assets Inventory
             </h1>
-            <p className="text-gray-600 mt-1">
-              Manage and track all allocated assets
-            </p>
           </div>
           <Link
             href="/admin/allocation"
@@ -282,7 +312,7 @@ export default function AdminAssetsInventory() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div
             className={`bg-white rounded-lg border p-6 cursor-pointer transition-all ${activeTab === "laptop" ? "border-blue-500 shadow-md" : "border-gray-200 hover:border-blue-300"}`}
             onClick={() => setActiveTab("laptop")}
@@ -315,7 +345,7 @@ export default function AdminAssetsInventory() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {laptopAllocations.filter((a) => a.status === "Active").length}{" "}
+              {laptopAllocations.filter((a) => a.status === "active").length}{" "}
               Active
             </p>
           </div>
@@ -352,7 +382,7 @@ export default function AdminAssetsInventory() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {mobileAllocations.filter((a) => a.status === "Active").length}{" "}
+              {mobileAllocations.filter((a) => a.status === "active").length}{" "}
               Active
             </p>
           </div>
@@ -387,7 +417,44 @@ export default function AdminAssetsInventory() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {monitorAllocations.filter((a) => a.status === "Active").length}{" "}
+              {monitorAllocations.filter((a) => a.status === "active").length}{" "}
+              Active
+            </p>
+          </div>
+
+          <div
+            className={`bg-white rounded-lg border p-6 cursor-pointer transition-all ${activeTab === "accessories" ? "border-blue-500 shadow-md" : "border-gray-200 hover:border-blue-300"}`}
+            onClick={() => setActiveTab("accessories")}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">
+                  Accessories
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {accessoriesAllocations.length}
+                </p>
+              </div>
+              <div
+                className={`p-3 rounded-full ${activeTab === "accessories" ? "bg-blue-50" : "bg-gray-50"}`}
+              >
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {accessoriesAllocations.filter((a) => a.status === "active").length}{" "}
               Active
             </p>
           </div>
@@ -582,9 +649,9 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              item.laptopOwnership === "Company"
+                              item.laptopOwnership === "company"
                                 ? "bg-blue-100 text-blue-800"
-                                : item.laptopOwnership === "Employee"
+                                : item.laptopOwnership === "employee"
                                   ? "bg-green-100 text-green-800"
                                   : "bg-gray-100 text-gray-800"
                             }`}
@@ -601,7 +668,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.charger === "Yes"
+                              item.charger === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -612,7 +679,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.bag === "Yes"
+                              item.bag === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -626,9 +693,9 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                              item.status === "Active"
+                              item.status === "active"
                                 ? "bg-green-100 text-green-800"
-                                : item.status === "Returned"
+                                : item.status === "returned"
                                   ? "bg-blue-100 text-blue-800"
                                   : "bg-yellow-100 text-yellow-800"
                             }`}
@@ -639,29 +706,29 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => handleEdit(item.id, "monitor")}
-                              className="p-2  text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                              title="View/Edit"
+                              onClick={() => handleView(item.id, "laptop")}
+                              className="p-2 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              title="View"
                             >
                               <Eye size={16} />
                             </button>
                             <button
-                              onClick={() => handleView(item.id, "monitor")}
-                              className="p-2  text-green-700 rounded hover:bg-green-200 transition-colors"
+                              onClick={() => handleEdit(item.id, "laptop")}
+                              className="p-2 text-green-700 rounded hover:bg-green-200 transition-colors"
                               title="Edit"
                             >
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => handleDownload(item.id, "monitor")}
+                              onClick={() => handleDownload(item.id, "laptop")}
                               className="p-1.5 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
                               title="Download Form"
                             >
                               <Download className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id, "monitor")}
-                              className="p-2  text-red-700 rounded hover:bg-red-200 transition-colors"
+                              onClick={() => handleDelete(item.id, "laptop")}
+                              className="p-2 text-red-700 rounded hover:bg-red-200 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -780,7 +847,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.charger === "Yes"
+                              item.charger === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -794,7 +861,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.backCover === "Yes"
+                              item.backCover === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -805,7 +872,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.simCard === "Yes"
+                              item.simCard === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -822,9 +889,9 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                              item.status === "Active"
+                              item.status === "active"
                                 ? "bg-green-100 text-green-800"
-                                : item.status === "Returned"
+                                : item.status === "returned"
                                   ? "bg-blue-100 text-blue-800"
                                   : "bg-yellow-100 text-yellow-800"
                             }`}
@@ -835,29 +902,29 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => handleEdit(item.id, "monitor")}
-                              className="p-2  text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                              title="View/Edit"
+                              onClick={() => handleView(item.id, "mobile")}
+                              className="p-2 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              title="View"
                             >
                               <Eye size={16} />
                             </button>
                             <button
-                              onClick={() => handleView(item.id, "monitor")}
-                              className="p-2  text-green-700 rounded hover:bg-green-200 transition-colors"
+                              onClick={() => handleEdit(item.id, "mobile")}
+                              className="p-2 text-green-700 rounded hover:bg-green-200 transition-colors"
                               title="Edit"
                             >
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => handleDownload(item.id, "monitor")}
+                              onClick={() => handleDownload(item.id, "mobile")}
                               className="p-1.5 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
                               title="Download Form"
                             >
                               <Download className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id, "monitor")}
-                              className="p-2  text-red-700 rounded hover:bg-red-200 transition-colors"
+                              onClick={() => handleDelete(item.id, "mobile")}
+                              className="p-2 text-red-700 rounded hover:bg-red-200 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -961,7 +1028,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.powerCable === "Yes"
+                              item.powerCable === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -972,7 +1039,7 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.hdmi === "Yes"
+                              item.hdmi === "yes"
                                 ? "bg-green-100 text-green-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
@@ -986,9 +1053,9 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2.5 py-1 text-xs font-medium rounded-full ${
-                              item.status === "Active"
+                              item.status === "active"
                                 ? "bg-green-100 text-green-800"
-                                : item.status === "Returned"
+                                : item.status === "returned"
                                   ? "bg-blue-100 text-blue-800"
                                   : "bg-yellow-100 text-yellow-800"
                             }`}
@@ -999,15 +1066,15 @@ export default function AdminAssetsInventory() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-1">
                             <button
-                              onClick={() => handleEdit(item.id, "monitor")}
-                              className="p-2  text-blue-700 rounded hover:bg-blue-200 transition-colors"
-                              title="View/Edit"
+                              onClick={() => handleView(item.id, "monitor")}
+                              className="p-2 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              title="View"
                             >
                               <Eye size={16} />
                             </button>
                             <button
-                              onClick={() => handleView(item.id, "monitor")}
-                              className="p-2  text-green-700 rounded hover:bg-green-200 transition-colors"
+                              onClick={() => handleEdit(item.id, "monitor")}
+                              className="p-2 text-green-700 rounded hover:bg-green-200 transition-colors"
                               title="Edit"
                             >
                               <Edit size={16} />
@@ -1021,7 +1088,190 @@ export default function AdminAssetsInventory() {
                             </button>
                             <button
                               onClick={() => handleDelete(item.id, "monitor")}
-                              className="p-2  text-red-700 rounded hover:bg-red-200 transition-colors"
+                              className="p-2 text-red-700 rounded hover:bg-red-200 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Accessories Table */}
+          {activeTab === "accessories" && (
+            <div className="table-scroll">
+              <table className="w-full min-w-[1200px]">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      EMP ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      EMP Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Business Area
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Accessories Count
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Types
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Serial Numbers
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Condition
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Allocation Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {accessoriesAllocations.length === 0 ? (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center">
+                        <div className="text-gray-500">
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                            />
+                          </svg>
+                          <p className="mt-2 text-sm font-medium">
+                            No accessories allocations found
+                          </p>
+                          <p className="text-sm">
+                            Try adjusting your search or filter
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    accessoriesAllocations.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {item.empId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.empName}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {item.businessArea}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.accessories.length}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {item.accessories.slice(0, 3).map((acc, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
+                              >
+                                {acc.accessoryType}
+                              </span>
+                            ))}
+                            {item.accessories.length > 3 && (
+                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
+                                +{item.accessories.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs">
+                          <div className="flex flex-col gap-1">
+                            {item.accessories.slice(0, 2).map((acc, idx) => (
+                              <span key={idx} className="font-mono text-xs">
+                                {acc.accessorySrNo}
+                              </span>
+                            ))}
+                            {item.accessories.length > 2 && (
+                              <span className="text-xs text-gray-500">
+                                +{item.accessories.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-1 text-xs rounded ${
+                              item.accessories.every(a => a.condition === "New")
+                                ? "bg-green-100 text-green-800"
+                                : item.accessories.some(a => a.condition === "Fair" || a.condition === "Poor")
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            {item.accessories.every(a => a.condition === "New") ? "All New" : "Mixed"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {item.allocationDate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full ${
+                              item.status === "active"
+                                ? "bg-green-100 text-green-800"
+                                : item.status === "returned"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleView(item.id, "accessories")}
+                              className="p-2 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                              title="View"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(item.id, "accessories")}
+                              className="p-2 text-green-700 rounded hover:bg-green-200 transition-colors"
+                              title="Edit"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDownload(item.id, "accessories")}
+                              className="p-1.5 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
+                              title="Download Form"
+                            >
+                              <Download className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(item.id, "accessories")}
+                              className="p-2 text-red-700 rounded hover:bg-red-200 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -1039,7 +1289,8 @@ export default function AdminAssetsInventory() {
           {/* Pagination */}
           {((activeTab === "laptop" && laptopAllocations.length > 0) ||
             (activeTab === "mobile" && mobileAllocations.length > 0) ||
-            (activeTab === "monitor" && monitorAllocations.length > 0)) && (
+            (activeTab === "monitor" && monitorAllocations.length > 0) ||
+            (activeTab === "accessories" && accessoriesAllocations.length > 0)) && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
               <div className="text-sm text-gray-700">
                 Showing <span className="font-medium">1</span> to{" "}
@@ -1048,7 +1299,9 @@ export default function AdminAssetsInventory() {
                     ? laptopAllocations.length
                     : activeTab === "mobile"
                       ? mobileAllocations.length
-                      : monitorAllocations.length}
+                      : activeTab === "monitor"
+                        ? monitorAllocations.length
+                        : accessoriesAllocations.length}
                 </span>{" "}
                 of{" "}
                 <span className="font-medium">
@@ -1056,7 +1309,9 @@ export default function AdminAssetsInventory() {
                     ? laptopAllocations.length
                     : activeTab === "mobile"
                       ? mobileAllocations.length
-                      : monitorAllocations.length}
+                      : activeTab === "monitor"
+                        ? monitorAllocations.length
+                        : accessoriesAllocations.length}
                 </span>{" "}
                 entries
               </div>

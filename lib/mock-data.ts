@@ -1,6 +1,5 @@
 import type { User, Asset, Allocation } from "./types"
 
-// Base types (you might need to add these to your types.ts)
 export interface BaseAllocation {
   id: string
   empId: string
@@ -44,6 +43,18 @@ export interface MonitorAllocation extends BaseAllocation {
   makeModel: string
   powerCable: 'yes' | 'no'
   hdmi: 'yes' | 'no'
+}
+
+export interface AccessoriesAllocation extends BaseAllocation {
+  category: 'accessories'
+  accessories: {
+    id: string
+    accessoryType: string
+    accessorySrNo: string
+    makeModel: string
+    condition: 'New' | 'Like New' | 'Good' | 'Fair' | 'Poor'
+    quantity: string
+  }[]
 }
 
 export const mockUsers: User[] = [
@@ -125,10 +136,12 @@ export const mockAssets: Asset[] = [
     model: "XPS 13",
     configuration: "i7, 16GB RAM, 512GB SSD",
     serialNumber: "DLXPS13-001",
+    imeiNumber: "357890123456789",
     purchaseDate: "2023-01-15",
     warrantyExpiry: "2026-01-15",
     status: "available",
     allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "2",
@@ -138,10 +151,12 @@ export const mockAssets: Asset[] = [
     model: 'MacBook Pro 14"',
     configuration: "M2, 16GB RAM, 256GB SSD",
     serialNumber: "MBP14-001",
+    imeiNumber: "357890123456790",
     purchaseDate: "2023-03-10",
     warrantyExpiry: "2026-03-10",
     status: "available",
     allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "3",
@@ -151,10 +166,12 @@ export const mockAssets: Asset[] = [
     model: "X1 Carbon",
     configuration: "i5, 8GB RAM, 256GB SSD",
     serialNumber: "LNTKP-001",
+    imeiNumber: "357890123456791",
     purchaseDate: "2023-05-20",
     warrantyExpiry: "2026-05-20",
     status: "available",
     allocationType: "Employee Owned",
+    ownership: "employee",
   },
   {
     id: "4",
@@ -164,10 +181,12 @@ export const mockAssets: Asset[] = [
     model: "840 G9",
     configuration: "i7, 32GB RAM, 1TB SSD",
     serialNumber: "HPELB-001",
+    imeiNumber: "357890123456792",
     purchaseDate: "2023-07-12",
     warrantyExpiry: "2026-07-12",
     status: "available",
     allocationType: "Company Owned",
+    ownership: "company",
   },
   
   // Mobile Devices
@@ -179,9 +198,12 @@ export const mockAssets: Asset[] = [
     model: "14 Pro",
     configuration: "256GB, Space Black",
     serialNumber: "IPH14-001",
+    imeiNumber: "356789012345678",
     purchaseDate: "2023-06-01",
     warrantyExpiry: "2025-06-01",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "6",
@@ -191,9 +213,12 @@ export const mockAssets: Asset[] = [
     model: "S23 Ultra",
     configuration: "512GB, Phantom Black",
     serialNumber: "SGS23-001",
+    imeiNumber: "357890123456123",
     purchaseDate: "2023-08-15",
     warrantyExpiry: "2025-08-15",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "7",
@@ -203,9 +228,12 @@ export const mockAssets: Asset[] = [
     model: "7 Pro",
     configuration: "128GB, Snow",
     serialNumber: "GPXL7-001",
+    imeiNumber: "356789054321098",
     purchaseDate: "2023-09-10",
     warrantyExpiry: "2025-09-10",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "8",
@@ -215,9 +243,12 @@ export const mockAssets: Asset[] = [
     model: "11 5G",
     configuration: "256GB, Titan Black",
     serialNumber: "OP11-001",
+    imeiNumber: "357890165432109",
     purchaseDate: "2023-10-05",
     warrantyExpiry: "2025-10-05",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   
   // Monitors
@@ -232,6 +263,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-02-20",
     warrantyExpiry: "2026-02-20",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "10",
@@ -244,6 +277,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-04-15",
     warrantyExpiry: "2026-04-15",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "11",
@@ -256,6 +291,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-07-30",
     warrantyExpiry: "2026-07-30",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "12",
@@ -268,6 +305,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-11-10",
     warrantyExpiry: "2026-11-10",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   
   // Accessories
@@ -282,6 +321,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-03-05",
     warrantyExpiry: "2025-03-05",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "14",
@@ -294,6 +335,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-05-12",
     warrantyExpiry: "2025-05-12",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "15",
@@ -306,6 +349,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-04-10",
     warrantyExpiry: "2025-04-10",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "16",
@@ -318,6 +363,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-06-20",
     warrantyExpiry: "2025-06-20",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "17",
@@ -330,6 +377,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-03-15",
     warrantyExpiry: "2025-03-15",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "18",
@@ -342,6 +391,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-08-05",
     warrantyExpiry: "2025-08-05",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "19",
@@ -354,6 +405,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-02-25",
     warrantyExpiry: "2026-02-25",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "20",
@@ -366,6 +419,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-09-18",
     warrantyExpiry: "2026-09-18",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "21",
@@ -378,6 +433,8 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-01-30",
     warrantyExpiry: "2026-01-30",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   {
     id: "22",
@@ -390,35 +447,153 @@ export const mockAssets: Asset[] = [
     purchaseDate: "2023-05-25",
     warrantyExpiry: "2026-05-25",
     status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  // Additional accessory types
+  {
+    id: "23",
+    assetId: "ASSET023",
+    name: "Laptop Charger",
+    category: "Charger",
+    model: "65W Type-C",
+    configuration: "Universal, Fast Charging",
+    serialNumber: "CHG-LPT001",
+    purchaseDate: "2023-02-10",
+    warrantyExpiry: "2025-02-10",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "24",
+    assetId: "ASSET024",
+    name: "Laptop Bag",
+    category: "Bag",
+    model: "Professional Backpack",
+    configuration: "Water Resistant, 15.6 inch",
+    serialNumber: "BAG-LPT001",
+    purchaseDate: "2023-03-15",
+    warrantyExpiry: "2025-03-15",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "25",
+    assetId: "ASSET025",
+    name: "HDMI Cable",
+    category: "Cable",
+    model: "High Speed",
+    configuration: "2m, 4K@60Hz",
+    serialNumber: "CBL-HDMI001",
+    purchaseDate: "2023-04-20",
+    warrantyExpiry: "2026-04-20",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "26",
+    assetId: "ASSET026",
+    name: "USB-C Adapter",
+    category: "Adapter",
+    model: "Multi-port",
+    configuration: "HDMI, USB, Ethernet",
+    serialNumber: "ADP-USBC001",
+    purchaseDate: "2023-05-25",
+    warrantyExpiry: "2026-05-25",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "27",
+    assetId: "ASSET027",
+    name: "Monitor Stand",
+    category: "Stand",
+    model: "Adjustable",
+    configuration: "Height adjustable, VESA compatible",
+    serialNumber: "STD-MON001",
+    purchaseDate: "2023-06-30",
+    warrantyExpiry: "2026-06-30",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "28",
+    assetId: "ASSET028",
+    name: "Phone Case",
+    category: "Case",
+    model: "Protective",
+    configuration: "Shock absorbent, Clear",
+    serialNumber: "CAS-PHN001",
+    purchaseDate: "2023-07-05",
+    warrantyExpiry: "2025-07-05",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
+  },
+  {
+    id: "29",
+    assetId: "ASSET029",
+    name: "Screen Protector",
+    category: "Screen Protector",
+    model: "Tempered Glass",
+    configuration: "9H hardness, Anti-glare",
+    serialNumber: "PRO-SCR001",
+    purchaseDate: "2023-08-10",
+    warrantyExpiry: "2025-08-10",
+    status: "available",
+    allocationType: "Company Owned",
+    ownership: "company",
   },
   
   // Previously allocated assets (for testing)
   {
-    id: "23",
-    assetId: "ASSET023",
+    id: "30",
+    assetId: "ASSET030",
     name: "Dell Laptop",
     category: "Computers",
     model: "Latitude 5430",
     configuration: "i5, 16GB RAM, 512GB SSD",
     serialNumber: "DLLAT-001",
+    imeiNumber: "357890123456793",
     purchaseDate: "2023-02-01",
     warrantyExpiry: "2026-02-01",
     status: "allocated",
     allocatedTo: "EMP001",
     allocationDate: "2023-02-01",
     allocationType: "Permanent",
+    ownership: "company",
   },
   {
-    id: "24",
-    assetId: "ASSET024",
+    id: "31",
+    assetId: "ASSET031",
     name: "HP Monitor",
-    category: "Peripherals",
+    category: "Monitor",
     model: '24" EliteDisplay',
     configuration: "1080p, 75Hz",
     serialNumber: "HPMON-001",
     purchaseDate: "2023-02-20",
     warrantyExpiry: "2025-02-20",
     status: "under_repair",
+    ownership: "company",
+  },
+  {
+    id: "32",
+    assetId: "ASSET032",
+    name: "iPhone 13",
+    category: "Mobile",
+    model: "13 Pro",
+    configuration: "128GB, Sierra Blue",
+    serialNumber: "IPH13-001",
+    imeiNumber: "356789012345679",
+    purchaseDate: "2022-11-15",
+    warrantyExpiry: "2024-11-15",
+    status: "returned",
+    ownership: "company",
   },
 ]
 
@@ -426,7 +601,7 @@ export const mockAssets: Asset[] = [
 export const mockAllocations: Allocation[] = [
   {
     id: "1",
-    assetId: "23",
+    assetId: "30",
     employeeId: "EMP001",
     allocationDate: "2023-02-01",
     allocationType: "Permanent",
@@ -436,7 +611,7 @@ export const mockAllocations: Allocation[] = [
   },
   {
     id: "2",
-    assetId: "24",
+    assetId: "31",
     employeeId: "EMP002",
     allocationDate: "2023-04-01",
     allocationType: "Temporary",
@@ -538,7 +713,7 @@ export const mockMobileAllocations: MobileAllocation[] = [
     empName: "Jane Smith",
     businessArea: "Product Management",
     mobileSrNo: "IPH14-001",
-    imeiNo: "123456789012345",
+    imeiNo: "356789012345678",
     makeModel: "iPhone 14 Pro",
     charger: "yes",
     chargerSrNo: "CHG-IPH001",
@@ -556,7 +731,7 @@ export const mockMobileAllocations: MobileAllocation[] = [
     empName: "Sarah Williams",
     businessArea: "Sales",
     mobileSrNo: "SGS23-001",
-    imeiNo: "234567890123456",
+    imeiNo: "357890123456123",
     makeModel: "Samsung Galaxy S23 Ultra",
     charger: "yes",
     chargerSrNo: "CHG-SAM001",
@@ -574,7 +749,7 @@ export const mockMobileAllocations: MobileAllocation[] = [
     empName: "Michael Brown",
     businessArea: "Operations",
     mobileSrNo: "GPXL7-001",
-    imeiNo: "345678901234567",
+    imeiNo: "356789054321098",
     makeModel: "Google Pixel 7 Pro",
     charger: "no",
     backCover: "yes",
@@ -628,6 +803,117 @@ export const mockMonitorAllocations: MonitorAllocation[] = [
     status: "returned",
     remarks: "Color-accurate monitor for design work",
     category: "monitor"
+  }
+]
+
+export const mockAccessoriesAllocations: AccessoriesAllocation[] = [
+  {
+    id: "ACC001",
+    empId: "EMP001",
+    empName: "John Doe",
+    businessArea: "Engineering",
+    accessories: [
+      {
+        id: "1",
+        accessoryType: "Headphone",
+        accessorySrNo: "SNYHP-001",
+        makeModel: "Sony WH-1000XM5",
+        condition: "New",
+        quantity: "1"
+      },
+      {
+        id: "2",
+        accessoryType: "Mouse",
+        accessorySrNo: "LGTMS-001",
+        makeModel: "Logitech MX Master 3S",
+        condition: "New",
+        quantity: "1"
+      },
+      {
+        id: "3",
+        accessoryType: "Keyboard",
+        accessorySrNo: "LGTKB-001",
+        makeModel: "Logitech MX Keys S",
+        condition: "New",
+        quantity: "1"
+      }
+    ],
+    allocationDate: "2024-01-16",
+    status: "active",
+    remarks: "Complete accessory setup for workstation",
+    category: "accessories"
+  },
+  {
+    id: "ACC002",
+    empId: "EMP002",
+    empName: "Jane Smith",
+    businessArea: "Product Management",
+    accessories: [
+      {
+        id: "4",
+        accessoryType: "Dock-station",
+        accessorySrNo: "DLDKS-001",
+        makeModel: "Dell WD19TBS",
+        condition: "Like New",
+        quantity: "1"
+      },
+      {
+        id: "5",
+        accessoryType: "Mac-Connector",
+        accessorySrNo: "APLMC-001",
+        makeModel: "Apple USB-C to HDMI",
+        condition: "Good",
+        quantity: "1"
+      },
+      {
+        id: "6",
+        accessoryType: "Charger",
+        accessorySrNo: "CHG-LPT001",
+        makeModel: "65W Type-C",
+        condition: "New",
+        quantity: "1"
+      }
+    ],
+    allocationDate: "2024-01-11",
+    status: "active",
+    remarks: "Docking and connectivity accessories for MacBook",
+    category: "accessories"
+  },
+  {
+    id: "ACC003",
+    empId: "EMP004",
+    empName: "Sarah Williams",
+    businessArea: "Sales",
+    accessories: [
+      {
+        id: "7",
+        accessoryType: "Bag",
+        accessorySrNo: "BAG-LPT001",
+        makeModel: "Professional Backpack",
+        condition: "New",
+        quantity: "1"
+      },
+      {
+        id: "8",
+        accessoryType: "Case",
+        accessorySrNo: "CAS-PHN001",
+        makeModel: "Protective Phone Case",
+        condition: "New",
+        quantity: "1"
+      },
+      {
+        id: "9",
+        accessoryType: "Screen Protector",
+        accessorySrNo: "PRO-SCR001",
+        makeModel: "Tempered Glass",
+        condition: "New",
+        quantity: "1"
+      }
+    ],
+    allocationDate: "2024-01-06",
+    status: "returned",
+    remarks: "Field accessories for sales representative",
+    category: "accessories"
   }
 ]
 

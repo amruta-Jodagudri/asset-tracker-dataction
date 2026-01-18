@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useAuth } from "@/lib/context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -215,7 +214,6 @@ export default function ReturnAssetPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Return/Store Asset</h1>
-            <p className="text-muted-foreground mt-1">Manage all assets in inventory</p>
           </div>
           <button
             onClick={() => setShowAddForm(true)}
@@ -248,13 +246,13 @@ export default function ReturnAssetPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border">
               <tr className="text-left text-muted-foreground">
-                <th className="pb-3 font-semibold">Asset ID</th>
-                <th className="pb-3 font-semibold">Asset Name</th>
+                {/* <th className="pb-3 font-semibold">Asset ID</th> */}
+                {/* <th className="pb-3 font-semibold">Asset Name</th> */}
                 <th className="pb-3 font-semibold">Category</th>
-                <th className="pb-3 font-semibold">Make Model</th>
                 <th className="pb-3 font-semibold">Serial Number</th>
-                <th className="pb-3 font-semibold">IMEI No.</th>
                 <th className="pb-3 font-semibold">Ownership</th>
+                <th className="pb-3 font-semibold">Make Model</th>
+                <th className="pb-3 font-semibold">IMEI No.</th>
                 <th className="pb-3 font-semibold">Status</th>
                 <th className="pb-3 font-semibold">Actions</th>
               </tr>
@@ -262,9 +260,15 @@ export default function ReturnAssetPage() {
             <tbody>
               {filteredAssets.map((asset) => (
                 <tr key={asset.id} className="border-b border-border hover:bg-secondary transition-colors">
-                  <td className="py-3 font-medium">{asset.assetId}</td>
-                  <td className="py-3">{asset.name}</td>
+                  {/* <td className="py-3 font-medium">{asset.assetId}</td> */}
+                  {/* <td className="py-3">{asset.name}</td> */}
                   <td className="py-3">{asset.category}</td>
+                  <td className="py-3 text-muted-foreground">{asset.serialNumber}</td>
+                  <td className="py-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getOwnershipBadgeClass(asset.ownership || "company")}`}>
+                      {asset.ownership ? asset.ownership.replace("-", " ").toUpperCase() : "COMPANY"}
+                    </span>
+                  </td>
                   <td className="py-3">
                     <div className="flex flex-col">
                       <span className="font-medium">{asset.makeModel || asset.model}</span>
@@ -273,13 +277,7 @@ export default function ReturnAssetPage() {
                       )}
                     </div>
                   </td>
-                  <td className="py-3 text-muted-foreground">{asset.serialNumber}</td>
-                  <td className="py-3 text-muted-foreground">{asset.imeiNumber}</td>
-                  <td className="py-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getOwnershipBadgeClass(asset.ownership || "company")}`}>
-                      {asset.ownership ? asset.ownership.replace("-", " ").toUpperCase() : "COMPANY"}
-                    </span>
-                  </td>
+                  <td className="py-3 text-muted-foreground">{asset.imeiNumber || "-"}</td>
                   <td className="py-3">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(asset.status)}`}>
                       {asset.status.replace("_", " ").toUpperCase()}
