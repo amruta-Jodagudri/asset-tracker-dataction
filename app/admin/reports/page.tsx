@@ -9,17 +9,25 @@ import AdminLayout from "@/components/admin-layout"
 import { mockAssets, mockAllocations, mockEmployees } from "@/lib/mock-data"
 import {
   exportTotalAssetReport,
-  exportAllocatedVsAvailable,
   exportEmployeeWiseAssets,
-  exportWarrantyExpiry,
   exportAssetRental,
 } from "@/lib/excel-export"
-import { BarChart3, FileText, TrendingUp, AlertCircle, Users } from "lucide-react"
+import { BarChart3, FileText, TrendingUp, AlertCircle, Users, Eye, Edit, Trash2, Download } from "lucide-react"
 
 export default function ITReportsPage() {
   const { user } = useAuth()
   const router = useRouter()
   const [assets] = useState(mockAssets)
+  const [employees, setEmployees] = useState(() => 
+    mockEmployees.map(emp => ({
+      ...emp,
+      // Generate usernames from email
+      username: emp.email.split('@')[0],
+      // Add mock passwords
+      password: `${emp.employeeId.toLowerCase()}123`
+    }))
+  )
+  const [showPassword, setShowPassword] = useState<{[key: string]: boolean}>({})
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -35,13 +43,79 @@ export default function ITReportsPage() {
   const available = assets.filter((a) => a.status === "available").length
   const underRepair = assets.filter((a) => a.status === "under_repair").length
 
-  // Warranty expiry
-  const today = new Date()
-  const expiringWarranties = assets.filter((a) => {
-    const expiryDate = new Date(a.warrantyExpiry)
-    const daysUntil = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    return daysUntil < 90 && daysUntil > 0
-  })
+  // Mock rental counts
+  const ivmRentals = 512
+  const zmRentals = 118
+
+  // Handle password visibility toggle
+  const togglePasswordVisibility = (empId: string) => {
+    setShowPassword(prev => ({
+      ...prev,
+      [empId]: !prev[empId]
+    }))
+  }
+
+  // Handle employee actions
+  const handleViewEmployee = (empId: string) => {
+    const employee = employees.find(emp => emp.id === empId)
+    console.log("View employee:", employee)
+    // Implement view logic - open modal or navigate to employee details
+    alert(`View employee: ${employee?.name}\nEMP ID: ${employee?.employeeId}\nDesignation: ${employee?.designation}`)
+  }
+
+  const handleEditEmployee = (empId: string) => {
+    const employee = employees.find(emp => emp.id === empId)
+    console.log("Edit employee:", employee)
+    // Implement edit logic - open edit modal
+    const newUsername = prompt("Enter new username:", employee?.username || "")
+    if (newUsername) {
+      setEmployees(prev => prev.map(emp => 
+        emp.id === empId ? { ...emp, username: newUsername } : emp
+      ))
+    }
+  }
+
+  const handleDeleteEmployee = (empId: string) => {
+    const employee = employees.find(emp => emp.id === empId)
+    if (employee && window.confirm(`Are you sure you want to delete employee ${employee.name} (${employee.employeeId})?`)) {
+      setEmployees(prev => prev.filter(emp => emp.id !== empId))
+      alert(`Employee ${employee.name} has been deleted successfully.`)
+    }
+  }
+
+  // Export employee list
+  const exportEmployeeList = () => {
+    // Create CSV content
+    const headers = ["EMP ID", "Employee Name", "Designation", "Department", "Email", "Username", "Status"]
+    const csvContent = [
+      headers.join(","),
+      ...employees.map(emp => [
+        emp.employeeId,
+        `"${emp.name}"`,
+        `"${emp.designation}"`,
+        `"${emp.department}"`,
+        emp.email,
+        emp.username,
+        "Active"
+      ].join(","))
+    ].join("\n")
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement("a")
+    const url = URL.createObjectURL(blob)
+    link.setAttribute("href", url)
+    link.setAttribute("download", `Employee_List_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  // Format password display
+  const getPasswordDisplay = (empId: string, password: string) => {
+    return showPassword[empId] ? password : "••••••••"
+  }
 
   return (
     <AdminLayout>
@@ -49,10 +123,11 @@ export default function ITReportsPage() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold text-foreground">IT Reports</h1>
+          <p className="text-muted-foreground mt-2">Generate and export various IT reports</p>
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -82,25 +157,52 @@ export default function ITReportsPage() {
               <TrendingUp size={32} className="text-orange-400" />
             </div>
           </div>
+
+          <div className="bg-red-50 rounded-lg p-6 border border-red-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600">Under Repair</p>
+                <p className="text-3xl font-bold text-red-700 mt-2">{underRepair}</p>
+              </div>
+              <AlertCircle size={32} className="text-red-400" />
+            </div>
+          </div>
         </div>
 
-        {/* Warning - Expiring Warranties */}
-        {expiringWarranties.length > 0 && (
-          <div className="bg-yellow-50 rounded-lg p-6 border-l-4 border-yellow-400">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="text-yellow-600 flex-shrink-0 mt-1" size={24} />
-              <div>
-                <h3 className="font-semibold text-yellow-800 mb-2">Warranty Expiry Alert</h3>
-                <p className="text-sm text-yellow-700">
-                  {expiringWarranties.length} asset(s) have warranties expiring within 90 days
-                </p>
+        {/* Rental Assets Summary Section */}
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <h2 className="text-xl font-bold text-foreground mb-4">Rental Assets Summary</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-600">IVM Rentals</p>
+                  <p className="text-3xl font-bold text-purple-700 mt-2">{ivmRentals}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Active rental assets</p>
+                </div>
+                <div className="bg-purple-100 p-3 rounded-full">
+                  <BarChart3 size={28} className="text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-cyan-50 to-teal-50 rounded-lg p-6 border border-cyan-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-cyan-600">ZM Rentals</p>
+                  <p className="text-3xl font-bold text-cyan-700 mt-2">{zmRentals}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Active rental assets</p>
+                </div>
+                <div className="bg-cyan-100 p-3 rounded-full">
+                  <TrendingUp size={28} className="text-cyan-600" />
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Reports Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Total Asset Report */}
           <ReportCard
             title="Total Asset Report"
@@ -109,28 +211,12 @@ export default function ITReportsPage() {
             onExport={() => exportTotalAssetReport(assets)}
           />
 
-          {/* Allocated vs Available */}
-          <ReportCard
-            title="Allocated vs Available"
-            description="Asset distribution across different statuses"
-            icon={<TrendingUp size={24} className="text-primary" />}
-            onExport={() => exportAllocatedVsAvailable(assets)}
-          />
-
           {/* Employee-wise Assets */}
           <ReportCard
             title="Employee-wise Assets"
             description="Assets breakdown by employee"
             icon={<Users size={24} className="text-primary" />}
             onExport={() => exportEmployeeWiseAssets(assets, mockAllocations, mockEmployees)}
-          />
-
-          {/* Warranty Expiry */}
-          <ReportCard
-            title="Warranty Expiry"
-            description="Assets warranty status and expiry dates"
-            icon={<AlertCircle size={24} className="text-primary" />}
-            onExport={() => exportWarrantyExpiry(assets)}
           />
 
           {/* Asset Rental */}
@@ -142,31 +228,123 @@ export default function ITReportsPage() {
           />
         </div>
 
-        {/* Sample Report Table */}
-        <div className="bg-card rounded-lg shadow border border-border p-6">
-          <h2 className="text-xl font-bold text-foreground mb-4">Asset Status Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600 font-medium">Allocated</p>
-              <p className="text-2xl font-bold text-blue-700 mt-2">{allocated}</p>
-              <p className="text-xs text-blue-600 mt-1">({((allocated / totalAssets) * 100).toFixed(1)}%)</p>
+        {/* Active Users List Section */}
+        <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Active Users</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                List of onboarded employees with system access
+              </p>
             </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600 font-medium">Available</p>
-              <p className="text-2xl font-bold text-green-700 mt-2">{available}</p>
-              <p className="text-xs text-green-600 mt-1">({((available / totalAssets) * 100).toFixed(1)}%)</p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600 font-medium">Under Repair</p>
-              <p className="text-2xl font-bold text-red-700 mt-2">{underRepair}</p>
-              <p className="text-xs text-red-600 mt-1">({((underRepair / totalAssets) * 100).toFixed(1)}%)</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 font-medium">Total</p>
-              <p className="text-2xl font-bold text-gray-700 mt-2">{totalAssets}</p>
-              <p className="text-xs text-gray-600 mt-1">100%</p>
-            </div>
+            <button
+              onClick={exportEmployeeList}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-all font-medium flex items-center gap-2"
+            >
+              <Download size={16} />
+              Export List
+            </button>
           </div>
+
+          {employees.length === 0 ? (
+            <div className="text-center py-8 border border-gray-200 rounded-lg">
+              <p className="text-gray-500">No employees found.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        EMP ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Employee Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Designation
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Username
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Password
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {employees.map((employee) => (
+                      <tr key={employee.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {employee.employeeId}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>
+                            <div className="font-medium">{employee.name}</div>
+                            <div className="text-xs text-gray-500">{employee.department}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.designation}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-700">{employee.email}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono">
+                              {getPasswordDisplay(employee.id, employee.password)}
+                            </span>
+                            <button
+                              onClick={() => togglePasswordVisibility(employee.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                              {showPassword[employee.id] ? "Hide" : "Show"}
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleViewEmployee(employee.id)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="View Details"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleEditEmployee(employee.id)}
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                              title="Edit Employee"
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteEmployee(employee.id)}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Delete Employee"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-4 text-sm text-gray-500">
+                Showing {employees.length} employees
+              </div>
+            </>
+          )}
         </div>
       </div>
     </AdminLayout>
