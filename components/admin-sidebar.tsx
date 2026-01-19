@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, Users, LogOut, FileText, BarChart3, Store } from "lucide-react"
+import { LayoutDashboard, Package, Users, LogOut, FileText, BarChart3, Store, Users2Icon, UsersRoundIcon, UserSquare2Icon } from "lucide-react"
 import { useAuth } from "@/lib/context"
 import { useRouter } from "next/navigation"
 
@@ -21,6 +21,11 @@ const menuItems = [
     label: "Allocation",
     href: "/admin/allocation",
     icon: Users,
+  },
+  {
+    label: "Surrender",
+    href: "/admin/surrender",
+    icon: UserSquare2Icon,
   },
   {
     label: "Return/Store Asset",

@@ -163,18 +163,21 @@ export default function AdminAssetsInventory() {
         break;
 
       case "accessories":
-        const sortedAccessories = filterAndSort(accessoriesAllocations, (item) => {
-          switch (sortKey) {
-            case "empName":
-              return item.empName;
-            case "allocationDate":
-              return item.allocationDate;
-            case "status":
-              return item.status;
-            default:
-              return item.allocationDate;
-          }
-        });
+        const sortedAccessories = filterAndSort(
+          accessoriesAllocations,
+          (item) => {
+            switch (sortKey) {
+              case "empName":
+                return item.empName;
+              case "allocationDate":
+                return item.allocationDate;
+              case "status":
+                return item.status;
+              default:
+                return item.allocationDate;
+            }
+          },
+        );
         setAccessoriesAllocations(sortedAccessories);
         break;
     }
@@ -185,10 +188,10 @@ export default function AdminAssetsInventory() {
   // Handle allocation actions
   const handleEdit = (id: string, type: AssetType) => {
     const typeMap = {
-      'laptop': 'Laptop & Accessories',
-      'mobile': 'Mobile',
-      'monitor': 'Monitor',
-      'accessories': 'Accessories'
+      laptop: "Laptop & Accessories",
+      mobile: "Mobile",
+      monitor: "Monitor",
+      accessories: "Accessories",
     };
     router.push(`/admin/allocation?edit=${id}&type=${typeMap[type]}`);
   };
@@ -428,9 +431,7 @@ export default function AdminAssetsInventory() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Accessories
-                </p>
+                <p className="text-sm font-medium text-gray-600">Accessories</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {accessoriesAllocations.length}
                 </p>
@@ -454,7 +455,10 @@ export default function AdminAssetsInventory() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {accessoriesAllocations.filter((a) => a.status === "active").length}{" "}
+              {
+                accessoriesAllocations.filter((a) => a.status === "active")
+                  .length
+              }{" "}
               Active
             </p>
           </div>
@@ -1103,7 +1107,7 @@ export default function AdminAssetsInventory() {
             </div>
           )}
 
-          {/* Accessories Table */}
+          {/* Accessories Table - Modified for single entry per accessory type */}
           {activeTab === "accessories" && (
             <div className="table-scroll">
               <table className="w-full min-w-[1200px]">
@@ -1119,13 +1123,13 @@ export default function AdminAssetsInventory() {
                       Business Area
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Accessories Count
+                      Accessory Type
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Types
+                      Serial Number
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Serial Numbers
+                      Make & Model
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Condition
@@ -1142,36 +1146,49 @@ export default function AdminAssetsInventory() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {accessoriesAllocations.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-6 py-12 text-center">
-                        <div className="text-gray-500">
-                          <svg
-                            className="mx-auto h-12 w-12 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                            />
-                          </svg>
-                          <p className="mt-2 text-sm font-medium">
-                            No accessories allocations found
-                          </p>
-                          <p className="text-sm">
-                            Try adjusting your search or filter
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    accessoriesAllocations.map((item) => (
+                  {(() => {
+                    // Flatten accessories data - create a row for each accessory
+                    const flatAccessories = accessoriesAllocations.flatMap(
+                      (allocation) =>
+                        allocation.accessories.map((accessory) => ({
+                          ...allocation,
+                          accessoryData: accessory,
+                        })),
+                    );
+
+                    if (flatAccessories.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={11} className="px-6 py-12 text-center">
+                            <div className="text-gray-500">
+                              <svg
+                                className="mx-auto h-12 w-12 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                                />
+                              </svg>
+                              <p className="mt-2 text-sm font-medium">
+                                No accessories allocations found
+                              </p>
+                              <p className="text-sm">
+                                Try adjusting your search or filter
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return flatAccessories.map((item, index) => (
                       <tr
-                        key={item.id}
+                        key={`${item.id}-${item.accessoryData.id}-${index}`}
                         className="hover:bg-gray-50 transition-colors"
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -1184,50 +1201,31 @@ export default function AdminAssetsInventory() {
                           {item.businessArea}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {item.accessories.length}
+                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                            {item.accessoryData.accessoryType}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs">
-                          <div className="flex flex-wrap gap-1">
-                            {item.accessories.slice(0, 3).map((acc, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded"
-                              >
-                                {acc.accessoryType}
-                              </span>
-                            ))}
-                            {item.accessories.length > 3 && (
-                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">
-                                +{item.accessories.length - 3} more
-                              </span>
-                            )}
-                          </div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
+                          {item.accessoryData.accessorySrNo}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 max-w-xs">
-                          <div className="flex flex-col gap-1">
-                            {item.accessories.slice(0, 2).map((acc, idx) => (
-                              <span key={idx} className="font-mono text-xs">
-                                {acc.accessorySrNo}
-                              </span>
-                            ))}
-                            {item.accessories.length > 2 && (
-                              <span className="text-xs text-gray-500">
-                                +{item.accessories.length - 2} more
-                              </span>
-                            )}
-                          </div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {item.accessoryData.makeModel}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
                             className={`px-2 py-1 text-xs rounded ${
-                              item.accessories.every(a => a.condition === "New")
+                              item.accessoryData.condition === "New"
                                 ? "bg-green-100 text-green-800"
-                                : item.accessories.some(a => a.condition === "Fair" || a.condition === "Poor")
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-blue-100 text-blue-800"
+                                : item.accessoryData.condition === "Like New"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : item.accessoryData.condition === "Good"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : item.accessoryData.condition === "Fair"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {item.accessories.every(a => a.condition === "New") ? "All New" : "Mixed"}
+                            {item.accessoryData.condition}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -1263,14 +1261,18 @@ export default function AdminAssetsInventory() {
                               <Edit size={16} />
                             </button>
                             <button
-                              onClick={() => handleDownload(item.id, "accessories")}
+                              onClick={() =>
+                                handleDownload(item.id, "accessories")
+                              }
                               className="p-1.5 text-purple-700 hover:bg-purple-200 rounded-md transition-colors"
                               title="Download Form"
                             >
                               <Download className="h-4 w-4" />
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id, "accessories")}
+                              onClick={() =>
+                                handleDelete(item.id, "accessories")
+                              }
                               className="p-2 text-red-700 rounded hover:bg-red-200 transition-colors"
                               title="Delete"
                             >
@@ -1279,8 +1281,8 @@ export default function AdminAssetsInventory() {
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -1290,7 +1292,8 @@ export default function AdminAssetsInventory() {
           {((activeTab === "laptop" && laptopAllocations.length > 0) ||
             (activeTab === "mobile" && mobileAllocations.length > 0) ||
             (activeTab === "monitor" && monitorAllocations.length > 0) ||
-            (activeTab === "accessories" && accessoriesAllocations.length > 0)) && (
+            (activeTab === "accessories" &&
+              accessoriesAllocations.length > 0)) && (
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between bg-gray-50">
               <div className="text-sm text-gray-700">
                 Showing <span className="font-medium">1</span> to{" "}

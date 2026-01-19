@@ -70,6 +70,11 @@ function AllocationContent() {
     powerCable: "Yes",
     hdmi: "Yes"
   })
+
+  // Accessories
+  const [accessories, setAccessories] = useState<AccessoryField[]>([
+    { type: "", serialNumber: "" }
+  ])
   
   // Accessories Fields
   const [accessoriesFields, setAccessoriesFields] = useState<AccessoryAllocationField[]>([])
@@ -181,6 +186,21 @@ function AllocationContent() {
     }
   }
 
+  const handleAccessoryChange = (index: number, field: keyof AccessoryField, value: string) => {
+    const updatedAccessories = [...accessories]
+    updatedAccessories[index] = { ...updatedAccessories[index], [field]: value }
+    
+    // Auto-fill serial number for selected accessory type
+    if (field === 'type' && value) {
+      const accessoryAsset = accessoryAssets.find(a => a.category === value)
+      if (accessoryAsset) {
+        updatedAccessories[index].serialNumber = accessoryAsset.serialNumber
+      }
+    }
+    
+    setAccessories(updatedAccessories)
+  }
+
   const handleLaptopFieldChange = (field: keyof LaptopFields, value: string) => {
     setLaptopFields(prev => ({ ...prev, [field]: value }))
     
@@ -266,10 +286,21 @@ function AllocationContent() {
     ])
   }
 
+  const addLaptopAccessory = () => {
+    setAccessories([...accessories, { type: "", serialNumber: "" }])
+  }
+
   const removeAccessory = (index: number) => {
     if (accessoriesFields.length > 1) {
       const updatedAccessories = accessoriesFields.filter((_, i) => i !== index)
       setAccessoriesFields(updatedAccessories)
+    }
+  }
+
+  const removeLaptopAccessory = (index: number) => {
+    if (accessories.length > 1) {
+      const updatedAccessories = accessories.filter((_, i) => i !== index)
+      setAccessories(updatedAccessories)
     }
   }
 
@@ -560,6 +591,68 @@ function AllocationContent() {
                       <option value="No">No</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Additional Accessories Section */}
+                <div className="space-y-4 pt-6 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-base font-medium text-gray-900">Additional Accessories</h3>
+                      <p className="text-sm text-gray-600 mt-1">Add extra accessories if needed</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addLaptopAccessory}
+                      className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add Accessory
+                    </button>
+                  </div>
+                  
+                  {accessories.map((accessory, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Asset Type</label>
+                        <select
+                          value={accessory.type}
+                          onChange={(e) => handleAccessoryChange(index, 'type', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Type</option>
+                          <option value="Headphone">Headphone</option>
+                          <option value="Mouse">Mouse</option>
+                          <option value="Keyboard">Keyboard</option>
+                          <option value="Dock-station">Dock-station</option>
+                          <option value="Mac-Connector">Mac-Connector</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Serial Number</label>
+                        <input
+                          type="text"
+                          value={accessory.serialNumber}
+                          onChange={(e) => handleAccessoryChange(index, 'serialNumber', e.target.value)}
+                          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      
+                      <div className="flex items-end">
+                        {accessories.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeLaptopAccessory(index)}
+                            className="px-4 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -1022,6 +1115,11 @@ type MobileFields = {
   backCover: "Yes" | "No"
   simCard: "Yes" | "No"
   simNumber: string
+}
+
+type AccessoryField = {
+  type: AccessoryType
+  serialNumber: string
 }
 
 type MonitorFields = {
