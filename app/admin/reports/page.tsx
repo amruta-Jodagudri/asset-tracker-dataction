@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useAuth } from "@/lib/context"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -126,7 +125,7 @@ export default function ITReportsPage() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -166,7 +165,7 @@ export default function ITReportsPage() {
               <AlertCircle size={32} className="text-red-400" />
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Rental Assets Summary Section */}
         <div className="bg-white rounded-lg shadow border border-gray-200 p-6">

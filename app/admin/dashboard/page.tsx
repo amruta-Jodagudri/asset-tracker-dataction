@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   // Calculate laptop-specific data
   const laptopAssets = mockAssets.filter(a => a.category === "Computers")
   const laptopOwnershipData = [
-    { name: "IBM Rental", value: 35, color: "#0088FE" },
+    { name: "IVM Rental", value: 35, color: "#0088FE" },
     { name: "ZM Rental", value: 25, color: "#00C49F" },
     { name: "Client", value: 20, color: "#FFBB28" },
     { name: "Owned", value: 20, color: "#FF8042" },
