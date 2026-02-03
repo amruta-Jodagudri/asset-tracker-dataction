@@ -121,12 +121,12 @@ export default function AdminDashboard() {
         </div>
 
         {/* Overall Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/*<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard title="Total Assets" value={totalAssets} />
           <StatsCard title="Allocated" value={allocatedAssets} />
           <StatsCard title="Available" value={availableAssets} />
           <StatsCard title="Under Repair" value={underRepair} />
-        </div>
+        </div>*/}
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

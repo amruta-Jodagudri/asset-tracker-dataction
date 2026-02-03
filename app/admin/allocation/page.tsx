@@ -73,7 +73,7 @@ function AllocationContent() {
 
   // Accessories
   const [accessories, setAccessories] = useState<AccessoryField[]>([
-    { type: "", serialNumber: "" }
+    { type: "", serialNumber: "", makeModel:"" }
   ])
   
   // Accessories Fields
@@ -615,7 +615,7 @@ function AllocationContent() {
                   {accessories.map((accessory, index) => (
                     <div key={index} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Asset Type</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Accessories Type</label>
                         <select
                           value={accessory.type}
                           onChange={(e) => handleAccessoryChange(index, 'type', e.target.value)}
@@ -639,6 +639,19 @@ function AllocationContent() {
                           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                       </div>
+
+                      {/* Make Model */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Make Model
+                          </label>
+                          <input
+                            type="text"
+                            value={accessory.makeModel}
+                            readOnly
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+                          />
+                        </div>
                       
                       <div className="flex items-end">
                         {accessories.length > 1 && (
@@ -1120,6 +1133,7 @@ type MobileFields = {
 type AccessoryField = {
   type: AccessoryType
   serialNumber: string
+  makeModel: string
 }
 
 type MonitorFields = {
