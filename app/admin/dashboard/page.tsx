@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Laptop Ownership Chart */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Laptop Ownership Distribution</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Assets Ownership Distribution</h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
 
           {/* Laptop Location Chart */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Laptop Location Status</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Assets Location Status</h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart

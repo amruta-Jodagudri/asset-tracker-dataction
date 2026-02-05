@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Package, Users, LogOut, FileText, BarChart3, Store, Users2Icon, UsersRoundIcon, UserSquare2Icon } from "lucide-react"
+import { LayoutDashboard, Package, Users, LogOut, FileText, BarChart3, Store, Users2Icon, UsersRoundIcon, UserSquare2Icon, UserCheck } from "lucide-react"
 import { useAuth } from "@/lib/context"
 import { useRouter } from "next/navigation"
 
@@ -36,6 +36,11 @@ const menuItems = [
     label: "IT Reports",
     href: "/admin/reports",
     icon: BarChart3,
+  },
+  {
+    label: "User Management",
+    href: "/admin/user-management",
+    icon: UserCheck,
   },
   {
     label: "Profile",
